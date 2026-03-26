@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+  <div id="app"></div>
+  <script src="bundle.js"></script>
+</body>
+</html>
+
+  <style>
+    body {
+      font-family: Arial;
+      margin: 0;
+      background: #fff;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 5px 10px;
+      border: 1px solid #dfe1e6;
+      cursor: pointer;
+      background: #f4f5f7;
+      border-radius: 3px;
+    }
+
+    .active {
+      background: #0052cc;
+      color: white;
+    }
+
+    #chartStatus {
+      padding: 10px;
+      color: #5e6c84;
+      font-size: 13px;
+    }
+
+    canvas {
+      max-width: 100%;
+      margin: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="toolbar">
+  <button id="pieBtn" class="btn active">Pie</button>
+  <button id="barBtn" class="btn">Bar</button>
+
+  <span style="color:#5e6c84">Group By:</span>
+
+  <button id="statusBtn" class="btn active">Status</button>
+  <button id="assigneeBtn" class="btn">Assignee</button>
+  <button id="priorityBtn" class="btn">Priority</button>
+</div>
+
+<div id="chartStatus">Loading...</div>
+<canvas id="chartCanvas"></canvas>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+modules:
+  jira:dashboardGadget:
+    # 🎛️ 1. FILTER CONTROLLER (Top bar)
+    - key: rich-filter-controller
+      title: Rich Filter Controller
+      description: Control filters dynamically across gadgets
+      thumbnail: static/thumbnail.svg
+      resource: controller-resource
+      resolver:
+        function: resolver
+      viewportSize: large
+
+    # 📋 2. RESULTS GADGET (Table)
+    - key: rich-filter-results
+      title: Rich Filter Results
+      description: Displays filtered issues
+      thumbnail: static/thumbnail.svg
+      resource: results-resource
+      resolver:
+        function: resolver
+      viewportSize: large
+
+    # 📊 3. CHART GADGET
+    - key: rich-filter-chart
+      title: Rich Filter Charts
+      description: Visualize filtered issues
+      thumbnail: static/thumbnail.svg
+      resource: chart-resource
+      resolver:
+        function: resolver
+      viewportSize: large
+
+    # 🔢 4. STATS GADGET
+    - key: rich-filter-stats
+      title: Rich Filter Stats
+      description: Issue counters and metrics
+      thumbnail: static/thumbnail.svg
+      resource: stats-resource
+      resolver:
+        function: resolver
+      viewportSize: small
+
+  jira:globalPage:
+    # 🗂️ Rich Filters Admin Page
+    - key: rich-filters-app
+      title: Rich Filters
+      resource: app-resource
+      resolver:
+        function: resolver
+
+  function:
+    - key: resolver
+      handler: index.handler
+
+resources:
+  # 🗂️ Rich Filters App Page
+  - key: app-resource
+    path: static/app
+
+  # 🎛️ Controller UI
+  - key: controller-resource
+    path: static/controller
+
+  # 📋 Results UI
+  - key: results-resource
+    path: static/results
+
+  # 📊 Chart UI
+  - key: chart-resource
+    path: static/chart
+
+  # 🔢 Stats UI
+  - key: stats-resource
+    path: static/stats
+
+permissions:
+  scopes:
+    - read:jira-work
+    - storage:app
+    - read:jira-user
+
+app:
+  id: ari:cloud:ecosystem::app/0b40a7d9-0481-40b2-9055-a954178f4efe
+  runtime:
+    name: nodejs20.x

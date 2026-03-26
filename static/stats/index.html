@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+  <div id="app"></div>
+  <script src="bundle.js"></script>
+</body>
+</html>
+
+  <style>
+    body {
+      font-family: Arial;
+      margin: 0;
+      background: #fff;
+    }
+
+    #status {
+      padding: 6px 10px;
+      color: #5e6c84;
+      font-size: 12px;
+    }
+
+    .container {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      min-width: 80px;
+      padding: 10px;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .total { background: #172b4d; }
+    .todo { background: #6b778c; }
+    .progress { background: #0052cc; }
+    .done { background: #00875a; }
+
+    .count {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .label {
+      font-size: 11px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="status">Loading...</div>
+<div class="container" id="statsContainer"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
