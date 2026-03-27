@@ -195,6 +195,20 @@ const DYNAMIC_FIELDS = [
   'Story point estimate','Summary','Time tracking','Voter','Watcher',
 ];
 
+// Column sources for the View detail column picker
+const ISSUE_FIELDS = [
+  'Affects versions','Assignee','CheckedorNot','Completed date','Components',
+  'Created','Creator','Due date','Epic link','Epic name','Fix versions',
+  'Issue key','Issue type','Labels','Last updated','Linked issues','Priority',
+  'Project','Reporter','Resolution','Resolution date','Sprint','Status',
+  'Story point estimate','Summary','Time tracking','Voter','Watcher',
+];
+const SPECIAL_COLUMNS = [
+  'Checkbox','Checklist progress','Comment count','Cumulative flow','Gantt chart',
+  'Issue actions','Issue navigator link','Rating','Status transition date',
+  'Time in status','Vote button','Watch button',
+];
+
 const TABS = [
   { id:'details',        ico:'🌐', label:'Details' },
   { id:'static',        ico:'≡',  label:'Static filters' },
@@ -219,17 +233,20 @@ const S = {
   searchQ: '',
   current: null,
   activeTab: 'details',
+  activeViewIdx: null,    // index of the view currently open in the detail sub-page
+  viewColumnTab: 'issue', // active tab in the column picker: 'issue' | 'special' | 'smart'
 };
 
 // ─────────────────────────────────────────────────────────────
 //  Helpers
 // ─────────────────────────────────────────────────────────────
 const esc   = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const app   = () => document.getElementById('app');
+// Render into #content-area when the React shell is present; fall back to #app.
+const app   = () => document.getElementById('content-area') || document.getElementById('app');
 const q     = sel => document.querySelector(sel);
 const qa    = sel => [...document.querySelectorAll(sel)];
 
-function setHTML(html) { app().innerHTML = html; }
+function setHTML(html) { if (app()) app().innerHTML = html; }
 
 function applySearch() {
   const q2 = S.searchQ.toLowerCase();
@@ -529,10 +546,10 @@ function renderTab() {
     case 'dynamic':      return renderDynamicTab();
     case 'smart':        return renderSmartTab();
     case 'views':        return renderViewsTab();
-    case 'queues':       return renderPlaceholder('Queues', 'Queues allow creating a list-based view of issues matching JQL conditions, for use in the <strong>Rich Filter Results</strong> gadget.');
-    case 'custom-values':return renderPlaceholder('Custom values', 'Define custom numeric values for issues to use in calculations and charts.');
-    case 'custom-ratios':return renderPlaceholder('Custom ratios', 'Create ratios based on custom values.');
-    case 'time-series':  return renderPlaceholder('Time series', 'Track changes in issue metrics over time.');
+    case 'queues':       return renderQueuesTab();
+    case 'custom-values':return renderCustomValuesTab();
+    case 'custom-ratios':return renderCustomRatiosTab();
+    case 'time-series':  return renderTimeSeriesTab();
     case 'misc':         return renderMiscTab();
     default:             return '';
   }
@@ -613,13 +630,13 @@ function renderStaticTab() {
               <td style="width:28px"><span class="dh2">⠿</span></td>
               <td style="font-weight:500">${esc(sf.name)}${sf.jql?`<div style="font-family:monospace;font-size:11px;color:#6b778c;margin-top:2px">${esc(sf.jql)}</div>`:''}</td>
               <td style="text-align:right">
-                <button class="rib" onclick="PAGE.editSF(${i})" title="Edit">✎</button>
-                <button class="rib del" onclick="PAGE.delSF(${i})" title="Delete">×</button>
+                <button class="rib" data-action="editSF" data-i="${i}" title="Edit">✎</button>
+                <button class="rib del" data-action="delSF" data-i="${i}" title="Delete">×</button>
               </td>
             </tr>`).join('')}
           </tbody>
         </table>`
-      : `<div class="es"><div class="es-i">🔘</div><p>No static filters defined.</p><button class="btn btn-p" onclick="PAGE.addSF()">Create static filter</button></div>`
+      : `<div class="es"><div class="es-i">🔘</div><p>No static filters defined.</p><button class="btn btn-p" data-action="addSF">Create static filter</button></div>`
     }`;
 }
 
@@ -637,7 +654,7 @@ function renderDynamicTab() {
             <tr>
               <td style="width:28px"><span class="dh2">⠿</span></td>
               <td>${esc(k)}</td>
-              <td><button class="rib del" onclick="PAGE.delDF('${esc(k)}')" title="Remove">×</button></td>
+              <td><button class="rib del" data-action="delDF" data-k="${esc(k)}" title="Remove">×</button></td>
             </tr>`).join('')}
           </tbody>
         </table>`
@@ -671,40 +688,142 @@ function renderSmartTab() {
               <td style="font-weight:500">${esc(sf.name)}</td>
               <td><span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:3px;font-size:11px;font-weight:700;background:#dfe1e6;color:#42526e">${sf.clauses?sf.clauses.length:1}</span></td>
               <td style="text-align:right">
-                <button class="rib" onclick="PAGE.editSmf(${i})" title="Edit">✎</button>
-                <button class="rib del" onclick="PAGE.delSmf(${i})" title="Delete">×</button>
+                <button class="rib" data-action="editSmf" data-i="${i}" title="Edit">✎</button>
+                <button class="rib del" data-action="delSmf" data-i="${i}" title="Delete">×</button>
               </td>
             </tr>`).join('')}
           </tbody>
         </table>`
-      : `<div class="es"><div class="es-i">✨</div><p>No smart filters defined.</p><button class="btn btn-p" onclick="PAGE.addSmf()">Create smart filter</button></div>`
+      : `<div class="es"><div class="es-i">✨</div><p>No smart filters defined.</p><button class="btn btn-p" data-action="addSmf">Create smart filter</button></div>`
     }`;
 }
 
 // ── VIEWS tab ─────────────────────────────────────────────────
 function renderViewsTab() {
   const items = S.current.views || [];
+  // Show view detail sub-page when a view is selected
+  if (S.activeViewIdx != null && items[S.activeViewIdx]) {
+    return renderViewDetail(S.activeViewIdx);
+  }
   return `
-    <div class="st">
-      <p class="st-d">Views are collections of columns showing data of your choosing. Displayed by the <strong>Rich Filter Results</strong> gadgets.</p>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px">
+      <p class="st-d" style="max-width:680px">Views are collections of columns showing data of your choosing. Displayed by the <strong>Rich Filter Results</strong> gadgets.</p>
       <button class="btn btn-p" id="btnAddView">Create view</button>
     </div>
     ${items.length
       ? `<table class="stbl" style="margin-bottom:16px">
-          <thead><tr><th>Name</th><th>Columns</th><th style="width:80px"></th></tr></thead>
+          <thead><tr><th>Name</th><th>Columns</th><th style="width:100px"></th></tr></thead>
           <tbody>${items.map((v,i) => `
-            <tr>
-              <td style="font-weight:500">${esc(v.name)}</td>
-              <td style="color:#6b778c">${v.columns?v.columns.length:0} columns</td>
-              <td style="text-align:right"><button class="rib del" onclick="PAGE.delView(${i})">×</button></td>
+            <tr style="cursor:pointer">
+              <td style="font-weight:500" data-action="openView" data-i="${i}">${esc(v.name)}</td>
+              <td style="color:#6b778c" data-action="openView" data-i="${i}">${v.columns ? v.columns.length : 0} column${v.columns && v.columns.length !== 1 ? 's' : ''}</td>
+              <td style="text-align:right">
+                <button class="rib" data-action="openView" data-i="${i}" title="Edit">&#9998;</button>
+                <button class="rib del" data-action="delView" data-i="${i}" title="Delete">&times;</button>
+              </td>
             </tr>`).join('')}
           </tbody>
         </table>`
-      : '<div style="padding:16px 0"></div>'
+      : '<div style="padding:8px 0"></div>'
     }
     <div class="vab">
       <button class="btn-s" id="btnEmptyView">Create empty view</button>
       <button class="btn-s" id="btnExView">Create example view</button>
+    </div>`;
+}
+
+// ── VIEW DETAIL sub-page ───────────────────────────────────────
+function renderViewDetail(idx) {
+  const v = S.current.views[idx];
+  const cols = v.columns || [];
+  const total = S.current.views.length;
+  const smartNames = (S.current.smartFilters || []).map(sf => sf.name);
+  const colTab = S.viewColumnTab || 'issue';
+
+  const issueAvail   = ISSUE_FIELDS.filter(f => !cols.includes(f));
+  const specialAvail = SPECIAL_COLUMNS.filter(f => !cols.includes(f));
+  const smartAvail   = smartNames.filter(f => !cols.includes(f));
+
+  const pickItems = list => list.length
+    ? list.map(f => `<div class="cp-item" data-action="addCol" data-col="${esc(f)}">${esc(f)}</div>`).join('')
+    : '<div style="padding:12px 16px;font-size:13px;color:#97a0af">All available columns are already added.</div>';
+
+  const tog = (action, on, label, badge) => `
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">
+      <div style="width:36px;height:20px;border-radius:10px;background:${on ? '#0052cc' : '#dfe1e6'};position:relative;cursor:pointer;flex-shrink:0;transition:background .15s" data-action="${action}">
+        <div style="position:absolute;top:2px;${on ? 'right:2px' : 'left:2px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:all .15s;pointer-events:none"></div>
+      </div>
+      ${label}${badge ? ` <span style="background:#172b4d;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.5px">${badge}</span>` : ''}
+    </label>`;
+
+  return `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+        <span id="vdNameDisplay" style="font-size:18px;font-weight:700;color:#172b4d;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.name)}</span>
+        <button class="rib" data-action="editViewName" title="Rename">&#9998;</button>
+        <button class="rib" data-action="viewOpts" title="Options" style="font-size:18px;letter-spacing:2px">&middot;&middot;&middot;</button>
+      </div>
+      <div style="display:flex;gap:3px;flex-shrink:0">
+        <button class="btn-ic" data-action="prevView" title="Previous view"${idx === 0 ? ' disabled' : ''}>&#8592;</button>
+        <button class="btn-ic" data-action="prevView" title="Previous view"${idx === 0 ? ' disabled' : ''}>&#8593;</button>
+        <button class="btn-ic" data-action="nextView" title="Next view"${idx >= total - 1 ? ' disabled' : ''}>&#8595;</button>
+      </div>
+    </div>
+    <div style="margin-bottom:20px">
+      <button class="btn-link" data-action="backToViews" style="font-size:12px;color:#6b778c;display:inline-flex;align-items:center;gap:4px">&larr; Back to views</button>
+    </div>
+
+    <p style="font-size:13px;color:#42526e;line-height:1.6;margin-bottom:20px;max-width:720px">
+      In each view you can have a list of columns based on issue fields, special columns, static filters, smart filters, or custom values.
+      You can also have a Gantt chart as the last column of the view.
+      The views are displayed by <strong>Rich Filter Results</strong> gadgets.
+    </p>
+
+    <div style="display:flex;align-items:center;gap:32px;margin-bottom:20px;flex-wrap:wrap">
+      ${tog('togGantt',   v.showGantt,   'Show Gantt chart',           'ADVANCED')}
+      ${tog('togTotals',  v.showTotals,  'Show totals row',            '')}
+      ${tog('togOneLine', v.oneLineRows, 'One-line rows by default',   '')}
+    </div>
+
+    <hr style="border:none;border-top:1px solid #f0f1f3;margin:0 0 16px">
+    <div style="font-size:13px;font-weight:700;color:#172b4d;margin-bottom:10px">Columns</div>
+
+    ${ !cols.length ? `
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:#fffae5;border:1px solid #ffe380;border-radius:4px;font-size:13px;color:#172b4d;margin-bottom:14px">
+      <span style="flex-shrink:0;font-size:16px">&#9888;&#65039;</span>
+      You need to select at least one column to display in this view. Otherwise, the view will not be displayed in <em>Rich Filter Results</em> gadgets.
+    </div>` : '' }
+
+    ${ cols.length ? `
+    <table class="stbl" style="margin-bottom:14px">
+      <thead><tr><th style="width:28px"></th><th>Column</th><th style="width:100px">Width</th><th style="width:90px"></th></tr></thead>
+      <tbody>${cols.map((col, ci) => `
+        <tr>
+          <td><span class="dh2">&#8942;</span></td>
+          <td style="font-size:13px">${esc(col)}</td>
+          <td><input type="number" class="fi" data-action="colWidth" data-ci="${ci}" value="${v.columnWidths && v.columnWidths[ci] ? v.columnWidths[ci] : ''}" placeholder="auto" style="padding:4px 7px;font-size:12px;width:80px"></td>
+          <td style="text-align:right">
+            <button class="rib" data-action="moveColUp" data-ci="${ci}" title="Move up"${ci === 0 ? ' disabled style="opacity:.35"' : ''}>&#8593;</button>
+            <button class="rib" data-action="moveColDown" data-ci="${ci}" title="Move down"${ci >= cols.length - 1 ? ' disabled style="opacity:.35"' : ''}>&#8595;</button>
+            <button class="rib del" data-action="removeCol" data-ci="${ci}" title="Remove">&times;</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '' }
+
+    <!-- Column picker -->
+    <div style="border:2px solid #4c9aff;border-radius:4px;overflow:hidden;max-width:640px">
+      <div style="display:flex;border-bottom:1px solid #dfe1e6">
+        <button class="cp-tab${colTab === 'issue'   ? ' act' : ''}" data-action="vColTab" data-tab="issue">ISSUE FIELDS</button>
+        <button class="cp-tab${colTab === 'special' ? ' act' : ''}" data-action="vColTab" data-tab="special">SPECIAL COLUMNS</button>
+        <button class="cp-tab${colTab === 'smart'   ? ' act' : ''}" data-action="vColTab" data-tab="smart">SMART FILTERS</button>
+      </div>
+      <div style="max-height:220px;overflow-y:auto">
+        <div style="padding:6px 16px 4px;font-size:11px;font-weight:700;color:#6b778c;background:#fafbfc">
+          ${ colTab === 'issue' ? 'ISSUE FIELDS' : colTab === 'special' ? 'SPECIAL COLUMNS' : 'SMART FILTERS' }
+        </div>
+        ${ colTab === 'issue' ? pickItems(issueAvail) : colTab === 'special' ? pickItems(specialAvail) : pickItems(smartAvail) }
+      </div>
     </div>`;
 }
 
@@ -726,20 +845,218 @@ function renderMiscTab() {
     </div>`;
 }
 
-// ── PLACEHOLDER tab ──────────────────────────────────────────
-function renderPlaceholder(title, desc) {
+// ── QUEUES tab ───────────────────────────────────────────────────
+function renderQueuesTab() {
+  const items = S.current.queues || [];
+
+  // Text shown in the "Show more" expanded panel (full detail)
+  const moreDesc = `Queues are lists of issues based on configurable additional JQL queries.
+    Each queue can have one or multiple views and its own sorting criteria.
+    Queues are ideal for organising support requests (by support agent, service desk, request type, etc.)
+    but also for managing lists of issues in general. The queues are displayed by <strong>Rich Filter Results</strong> gadgets.`;
+
+  // Text shown only in the empty-state box (the "no queues" notice)
+  const emptyNotice = `There are no queues defined for this rich filter. Unless at least one queue is defined,
+    <strong>Rich Filter Results</strong> gadgets using this rich filter will display all the issues
+    returned by the rich filter and any additional filtering at dashboard level.`;
+
+  return `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:4px">
+      <p class="st-d" style="max-width:680px">Queues are lists of issues based on configurable additional JQL queries. Each queue can have one or multiple views and its own sorting criteria. <a class="btn-link" id="qShowMore">Show more</a></p>
+      <button class="btn btn-p" id="btnAddQ" style="flex-shrink:0">Create queue</button>
+    </div>
+    <div id="qMoreDesc" style="display:none;color:#42526e;font-size:13px;line-height:1.7;margin-bottom:16px;max-width:680px">${moreDesc}</div>
+    ${items.length
+      ? `<table class="stbl" style="margin-top:12px">
+          <thead><tr><th></th><th>Name</th><th>JQL filter</th><th style="width:80px">Static</th><th style="width:90px">Fixed order</th><th style="width:80px"></th></tr></thead>
+          <tbody>${items.map((q2, i) => `
+            <tr>
+              <td style="width:28px"><span class="dh2">⠿</span></td>
+              <td style="font-weight:500">${esc(q2.name)}</td>
+              <td style="font-family:monospace;font-size:12px;color:#6b778c;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(q2.jql || '—')}</td>
+              <td style="text-align:center">${q2.staticQueue ? '<span style="color:#006644;font-weight:700">Yes</span>' : '<span style="color:#97a0af">No</span>'}</td>
+              <td style="text-align:center">${q2.fixedOrder ? '<span style="color:#006644;font-weight:700">Yes</span>' : '<span style="color:#97a0af">No</span>'}</td>
+              <td style="text-align:right">
+                <button class="rib" data-action="editQ" data-i="${i}" title="Edit">✎</button>
+                <button class="rib del" data-action="delQ" data-i="${i}" title="Delete">×</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`
+      : `<div class="es" style="margin-top:12px">
+          <div class="es-i">📋</div>
+          <p style="color:#172b4d;font-weight:600;font-size:14px;margin-bottom:10px">No queues defined</p>
+          <p style="font-size:13px;color:#42526e;max-width:520px;line-height:1.6;margin:0 auto 16px">${emptyNotice}</p>
+          <button class="btn btn-p" data-action="addQ">Create queue</button>
+        </div>`
+    }`;
+}
+
+// ── CUSTOM VALUES tab ───────────────────────────────────────
+function renderCustomValuesTab() {
+  const items = S.current.customValues || [];
   return `
     <div class="st">
-      <p class="st-d">${desc}</p>
-      <button class="btn btn-p" disabled style="opacity:.4">Create</button>
+      <p class="st-d">Custom values allow you to assign a numeric value to issues based on JQL clauses. Useful for scoring, prioritisation and charts.</p>
+      <button class="btn btn-p" id="btnAddCV">Create custom value</button>
     </div>
-    <div class="es"><div class="es-i">🚧</div><p>${title} — coming soon</p></div>`;
+    ${items.length
+      ? `<table class="stbl">
+          <thead><tr><th></th><th>Name</th><th style="width:110px">Default value</th><th style="width:120px"></th></tr></thead>
+          <tbody>${items.map((cv, i) => `
+            <tr>
+              <td style="width:28px"><span class="dh2">⠸⣿</span></td>
+              <td>
+                <div style="font-weight:500">${esc(cv.name)}</div>
+                <div style="font-size:11px;color:#6b778c;margin-top:2px">${cv.clauses ? cv.clauses.length : 0} clause${cv.clauses && cv.clauses.length !== 1 ? 's' : ''}</div>
+              </td>
+              <td style="font-size:13px;color:#6b778c">${cv.defaultValue != null ? cv.defaultValue : 0}</td>
+              <td style="text-align:right">
+                <button class="rib" data-action="editCV" data-i="${i}" title="Edit">✎</button>
+                <button class="rib del" data-action="delCV" data-i="${i}" title="Delete">×</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`
+      : `<div class="es"><div class="es-i">📊</div><p>No custom values defined yet.</p><button class="btn btn-p" data-action="addCV">Create custom value</button></div>`
+    }`;
+}
+
+// ── CUSTOM RATIOS tab ────────────────────────────────────────
+function renderCustomRatiosTab() {
+  const cvItems = S.current.customValues || [];
+  const items   = S.current.customRatios || [];
+  // Build select options only if custom values exist
+  const cvOpts  = cvItems.map(cv => `<option value="${esc(cv.name)}">${esc(cv.name)}</option>`).join('');
+  return `
+    <div class="st">
+      <p class="st-d">Custom ratios display the proportion of one custom value against another — for use in the <strong>Rich Filter Chart</strong> gadget.</p>
+      <button class="btn btn-p" id="btnAddCR">Create custom ratio</button>
+    </div>
+    ${!cvItems.length ? `<div class="ia ia-err" style="max-width:600px;margin-bottom:16px;display:flex;align-items:flex-start;gap:8px"><span style="font-size:16px;flex-shrink:0">⚠️</span><span>No custom values defined yet. <a class="btn-link" id="crGoCV">Create a custom value</a> to use it as numerator or denominator.</span></div>` : ''}
+    ${items.length
+      ? `<table class="stbl">
+          <thead><tr><th>Name</th><th>Numerator</th><th>Denominator</th><th style="width:80px"></th></tr></thead>
+          <tbody>${items.map((cr, i) => `
+            <tr>
+              <td style="font-weight:500">${esc(cr.name)}</td>
+              <td style="font-size:13px;color:#6b778c">${esc(cr.numerator || '')}</td>
+              <td style="font-size:13px;color:#6b778c">${esc(cr.denominator || '')}</td>
+              <td style="text-align:right">
+                <button class="rib del" data-action="delCR" data-i="${i}" title="Delete">×</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`
+      : `<div class="es"><div class="es-i">⊗</div><p>No custom ratios defined yet.</p></div>`
+    }`;
+}
+
+// ── TIME SERIES tab ────────────────────────────────────────────
+function renderTimeSeriesTab() {
+  const items = S.current.timeSeries || [];
+  return `
+    <div class="st">
+      <p class="st-d">Time series allow you to track how issue counts or numeric values change over time. Results are shown in the <strong>Rich Filter Chart</strong> gadget.</p>
+      <button class="btn btn-p" id="btnAddTS">Create time series</button>
+    </div>
+    ${items.length
+      ? `<table class="stbl">
+          <thead><tr><th>Name</th><th>Field</th><th>Interval</th><th style="width:80px"></th></tr></thead>
+          <tbody>${items.map((ts, i) => `
+            <tr>
+              <td style="font-weight:500">${esc(ts.name)}</td>
+              <td style="font-size:13px;color:#6b778c">${esc(ts.field || 'Issue count')}</td>
+              <td style="font-size:13px;color:#6b778c">${esc(ts.interval || 'Weekly')}</td>
+              <td style="text-align:right">
+                <button class="rib" data-action="editTS" data-i="${i}" title="Edit">✎</button>
+                <button class="rib del" data-action="delTS" data-i="${i}" title="Delete">×</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`
+      : `<div class="es"><div class="es-i">📈</div><p>No time series defined yet.</p><button class="btn btn-p" data-action="addTS">Create time series</button></div>`
+    }`;
 }
 
 // ─────────────────────────────────────────────────────────────
 //  TAB BODY EVENTS
 // ─────────────────────────────────────────────────────────────
 function bindTabBody() {
+  // Event delegation — catches all data-action buttons
+  // (inline onclick is blocked by Forge CSP script-src 'unsafe-inline')
+  const tabBody = document.getElementById('tabBody');
+  if (tabBody) {
+    tabBody.addEventListener('click', e => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const i = btn.dataset.i != null ? parseInt(btn.dataset.i, 10) : undefined;
+      const k = btn.dataset.k;
+      if      (action === 'addSF')   showSFModal();
+      else if (action === 'editSF')  showSFModal(i);
+      else if (action === 'delSF')   { S.current.staticFilters.splice(i, 1); doSave({ staticFilters: S.current.staticFilters }); refreshTab(); }
+      else if (action === 'delDF')   { delete S.current.dynamicFilters[k]; refreshTab(); }
+      else if (action === 'addSmf')  showSmfModal();
+      else if (action === 'editSmf') showSmfModal(i);
+      else if (action === 'delSmf')  { S.current.smartFilters.splice(i, 1); doSave({ smartFilters: S.current.smartFilters }); refreshTab(); }
+      else if (action === 'delView')    { S.current.views.splice(i, 1); if (S.activeViewIdx != null) S.activeViewIdx = null; doSave({ views: S.current.views }); refreshTab(); }
+      else if (action === 'openView')    { S.activeViewIdx = i; S.viewColumnTab = 'issue'; refreshTab(); }
+      else if (action === 'backToViews') { S.activeViewIdx = null; refreshTab(); }
+      else if (action === 'prevView')    { if (S.activeViewIdx > 0) { S.activeViewIdx--; refreshTab(); } }
+      else if (action === 'nextView')    { if (S.activeViewIdx < S.current.views.length - 1) { S.activeViewIdx++; refreshTab(); } }
+      else if (action === 'togGantt')    { S.current.views[S.activeViewIdx].showGantt   = !S.current.views[S.activeViewIdx].showGantt;   doSave({ views: S.current.views }); refreshTab(); }
+      else if (action === 'togTotals')   { S.current.views[S.activeViewIdx].showTotals  = !S.current.views[S.activeViewIdx].showTotals;  doSave({ views: S.current.views }); refreshTab(); }
+      else if (action === 'togOneLine')  { S.current.views[S.activeViewIdx].oneLineRows = !S.current.views[S.activeViewIdx].oneLineRows; doSave({ views: S.current.views }); refreshTab(); }
+      else if (action === 'vColTab')     { S.viewColumnTab = btn.dataset.tab; refreshTab(); }
+      else if (action === 'addCol') {
+        const col = btn.dataset.col;
+        if (col) {
+          S.current.views[S.activeViewIdx].columns = S.current.views[S.activeViewIdx].columns || [];
+          S.current.views[S.activeViewIdx].columns.push(col);
+          doSave({ views: S.current.views }); refreshTab();
+        }
+      }
+      else if (action === 'removeCol') {
+        const ci = parseInt(btn.dataset.ci, 10);
+        S.current.views[S.activeViewIdx].columns.splice(ci, 1);
+        if (S.current.views[S.activeViewIdx].columnWidths) S.current.views[S.activeViewIdx].columnWidths.splice(ci, 1);
+        doSave({ views: S.current.views }); refreshTab();
+      }
+      else if (action === 'moveColUp') {
+        const ci = parseInt(btn.dataset.ci, 10);
+        if (ci > 0) { const c = S.current.views[S.activeViewIdx].columns; [c[ci-1], c[ci]] = [c[ci], c[ci-1]]; doSave({ views: S.current.views }); refreshTab(); }
+      }
+      else if (action === 'moveColDown') {
+        const ci = parseInt(btn.dataset.ci, 10);
+        const c = S.current.views[S.activeViewIdx].columns;
+        if (ci < c.length - 1) { [c[ci], c[ci+1]] = [c[ci+1], c[ci]]; doSave({ views: S.current.views }); refreshTab(); }
+      }
+      else if (action === 'editViewName') {
+        const display = document.getElementById('vdNameDisplay');
+        if (!display) return;
+        const cur = S.current.views[S.activeViewIdx].name;
+        const inp = document.createElement('input');
+        inp.className = 'fi'; inp.value = cur;
+        inp.style.cssText = 'width:260px;padding:5px 9px;font-size:16px;font-weight:700';
+        display.replaceWith(inp); inp.focus(); inp.select();
+        const commit = () => { const n = inp.value.trim() || cur; S.current.views[S.activeViewIdx].name = n; doSave({ views: S.current.views }); refreshTab(); };
+        inp.addEventListener('blur', commit);
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { inp.value = cur; inp.blur(); } });
+      }
+      else if (action === 'addQ')    showQueueModal();
+      else if (action === 'editQ')   showQueueModal(i);
+      else if (action === 'delQ')    { S.current.queues.splice(i, 1); doSave({ queues: S.current.queues }); refreshTab(); }
+      else if (action === 'addCV')   showCVModal();
+      else if (action === 'editCV')  showCVModal(i);
+      else if (action === 'delCV')   { S.current.customValues.splice(i, 1); doSave({ customValues: S.current.customValues }); refreshTab(); }
+      else if (action === 'delCR')   { S.current.customRatios.splice(i, 1); doSave({ customRatios: S.current.customRatios }); refreshTab(); }
+      else if (action === 'addTS')   showTSModal();
+      else if (action === 'editTS')  showTSModal(i);
+      else if (action === 'delTS')   { S.current.timeSeries.splice(i, 1); doSave({ timeSeries: S.current.timeSeries }); refreshTab(); }
+    });
+  }
+
   // Details
   q('#btnSaveDet')?.addEventListener('click', async () => {
     const name  = (q('#dN')?.value||'').trim();
@@ -784,9 +1101,40 @@ function bindTabBody() {
   q('#btnEmptyView')?.addEventListener('click', () => showViewModal());
   q('#btnExView')?.addEventListener('click', () => {
     S.current.views = S.current.views||[];
-    S.current.views.push({name:'Example view',columns:['Key','Summary','Status','Priority','Assignee'],showTotals:false,oneLineRows:false});
-    doSave({views:S.current.views}); refreshTab();
+    const idx = S.current.views.length;
+    S.current.views.push({name:'Example view',columns:['Issue key','Summary','Status','Priority','Assignee'],showTotals:false,oneLineRows:false,showGantt:false});
+    doSave({views:S.current.views});
+    S.activeViewIdx = idx;
+    S.viewColumnTab = 'issue';
+    refreshTab();
   });
+  // Column width inputs in view detail
+  qa('[data-action="colWidth"]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      if (S.activeViewIdx == null) return;
+      const ci = parseInt(inp.dataset.ci, 10);
+      S.current.views[S.activeViewIdx].columnWidths = S.current.views[S.activeViewIdx].columnWidths || [];
+      S.current.views[S.activeViewIdx].columnWidths[ci] = parseInt(inp.value, 10) || null;
+      doSave({ views: S.current.views });
+    });
+  });
+
+  // Queues
+  q('#btnAddQ')?.addEventListener('click', () => showQueueModal());
+  q('#qShowMore')?.addEventListener('click', () => {
+    const el = document.getElementById('qMoreDesc');
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Custom values
+  q('#btnAddCV')?.addEventListener('click', () => showCVModal());
+
+  // Custom ratios
+  q('#btnAddCR')?.addEventListener('click', () => showCRModal());
+  q('#crGoCV')?.addEventListener('click',  () => { S.activeTab = 'custom-values'; qa('.ti').forEach(x => x.classList.toggle('act', x.dataset.tab === 'custom-values')); refreshTab(); });
+
+  // Time series
+  q('#btnAddTS')?.addEventListener('click', () => showTSModal());
 
   // Misc
   q('#btnSaveMisc')?.addEventListener('click', async () => {
@@ -810,6 +1158,340 @@ function mkModal(html) {
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if (e.target === ov) closeModals(); });
   return ov;
+}
+
+// Queue modal — matches marketplace "Create a queue" exactly
+function showQueueModal(idx) {
+  const editing = idx != null;
+  const q2 = editing ? JSON.parse(JSON.stringify(S.current.queues[idx]))
+    : { name: '', jql: '', views: 'all', staticQueue: false, fixedOrder: false };
+
+  // Build views list for "Customize shown views" option
+  const viewItems = S.current.views || [];
+  const viewCheckboxes = viewItems.map((v, vi) => {
+    const checked = !editing || q2.shownViews == null || q2.shownViews.includes(vi);
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:6px;cursor:pointer">
+      <input type="checkbox" class="qv-cb" data-vi="${vi}" ${checked ? 'checked' : ''} style="width:14px;height:14px;accent-color:#0052cc">
+      <span>${esc(v.name)}</span>
+    </label>`;
+  }).join('');
+
+  mkModal(`
+    <div class="mo-hd">
+      <h2>${editing ? 'Edit queue' : 'Create a queue'}</h2>
+    </div>
+    <div class="mo-bd">
+      <div class="fg">
+        <label class="fl" for="qName">Name <span class="req">*</span></label>
+        <input class="fi" id="qName" value="${esc(q2.name)}" autocomplete="off" placeholder="Queue name…">
+        <div class="ferr" id="qNameErr">Name is required.</div>
+      </div>
+
+      <div class="fg">
+        <label class="fl" for="qJql">JQL</label>
+        <textarea class="fi" id="qJql" rows="3" style="font-family:monospace;font-size:13px" placeholder="Type JQL…">${esc(q2.jql || '')}</textarea>
+        <div class="fh">Additional JQL query for the queue. Optionally use an ORDER BY clause to set the default order of the issues in this queue. Remember, the issues in the queue are already filtered by the base Jira filter.</div>
+      </div>
+
+      <div class="fg">
+        <div class="fl" style="margin-bottom:8px">Views</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;margin-bottom:6px">
+          <input type="radio" id="qVAll" name="qViews" value="all" ${q2.views !== 'custom' ? 'checked' : ''} style="accent-color:#0052cc">
+          Show all views
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
+          <input type="radio" id="qVCust" name="qViews" value="custom" ${q2.views === 'custom' ? 'checked' : ''} style="accent-color:#0052cc">
+          Customize shown views
+        </label>
+        <div id="qViewSel" style="padding-left:24px;margin-top:6px;display:${q2.views === 'custom' ? 'block' : 'none'}">
+          ${viewItems.length ? viewCheckboxes : '<div style="font-size:12px;color:#97a0af">No views defined yet.</div>'}
+        </div>
+      </div>
+
+      <div class="fg">
+        <div class="fl" style="margin-bottom:8px">Queue behaviour options</div>
+        <label style="display:flex;align-items:flex-start;gap:10px;font-size:14px;cursor:pointer;margin-bottom:12px">
+          <input type="checkbox" id="qStatic" ${q2.staticQueue ? 'checked' : ''} style="width:15px;height:15px;accent-color:#0052cc;margin-top:2px;flex-shrink:0">
+          <div>
+            <div style="font-weight:500">Static queue</div>
+            <div style="font-size:12px;color:#6b778c;margin-top:3px;line-height:1.5">The issues displayed by static queues cannot be filtered out by quick filters in <em>Rich Filter Controller</em> gadgets. Use this option if the issues displayed by this queue should always be visible.</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="qFixed" ${q2.fixedOrder ? 'checked' : ''} style="width:15px;height:15px;accent-color:#0052cc;margin-top:2px;flex-shrink:0">
+          <div>
+            <div style="font-weight:500">Fixed-order queue</div>
+            <div style="font-size:12px;color:#6b778c;margin-top:3px;line-height:1.5">The order in which the issues are displayed by fixed-order queues in <em>Rich Filter Results</em> gadgets cannot be altered by clicking on column headers. Use this option if this queue should always display the issues in a specific and immutable order, as configured in the queue.</div>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div class="mo-ft" style="justify-content:space-between">
+      ${!editing ? `<label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
+        <input type="checkbox" id="qAnother" style="width:14px;height:14px;accent-color:#0052cc">
+        Create another
+      </label>` : '<span></span>'}
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-p" id="qOk">${editing ? 'Save' : 'Create'}</button>
+        <button class="btn btn-d" id="qCan">Cancel</button>
+      </div>
+    </div>`);
+
+  document.getElementById('qName').focus();
+
+  // Toggle custom views panel
+  document.querySelectorAll('input[name="qViews"]').forEach(r => r.addEventListener('change', () => {
+    const sel = document.getElementById('qViewSel');
+    if (sel) sel.style.display = r.value === 'custom' && r.checked ? 'block' : 'none';
+  }));
+
+  document.getElementById('qCan').onclick = closeModals;
+  document.getElementById('qOk').onclick = () => {
+    const name = (document.getElementById('qName').value || '').trim();
+    if (!name) { document.getElementById('qName').classList.add('inv'); document.getElementById('qNameErr').classList.add('show'); return; }
+    const jql         = (document.getElementById('qJql').value || '').trim();
+    const viewsMode   = document.querySelector('input[name="qViews"]:checked')?.value || 'all';
+    const staticQueue = !!document.getElementById('qStatic').checked;
+    const fixedOrder  = !!document.getElementById('qFixed').checked;
+    let shownViews = null;
+    if (viewsMode === 'custom') {
+      shownViews = [];
+      document.querySelectorAll('.qv-cb').forEach(cb => { if (cb.checked) shownViews.push(parseInt(cb.dataset.vi, 10)); });
+    }
+    S.current.queues = S.current.queues || [];
+    const entry = { name, jql, views: viewsMode, shownViews, staticQueue, fixedOrder };
+    if (editing) S.current.queues[idx] = entry;
+    else S.current.queues.push(entry);
+    doSave({ queues: S.current.queues });
+    const another = !editing && document.getElementById('qAnother')?.checked;
+    refreshTab();
+    if (another) showQueueModal(); else closeModals();
+  };
+}
+
+// Custom Value modal
+function showCVModal(idx) {
+  const editing = idx != null;
+  const cv = editing ? JSON.parse(JSON.stringify(S.current.customValues[idx])) : { name: '', defaultValue: 0, clauses: [] };
+  cv.clauses = cv.clauses || [];
+
+  function clauseRows() {
+    if (!cv.clauses.length) return '<div style="color:#6b778c;font-size:13px;padding:8px 0">No clauses yet. Add one below.</div>';
+    return cv.clauses.map((c, i) => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px" data-ci="${i}">
+        <span style="min-width:18px;font-size:12px;color:#97a0af;text-align:right">${i + 1}.</span>
+        <input class="fi" data-clause-jql="${i}" value="${esc(c.jql || '')}" placeholder="JQL clause…" style="flex:1;padding:7px 9px">
+        <input class="fi" data-clause-val="${i}" type="number" value="${c.value != null ? c.value : 1}" style="width:70px;padding:7px 9px" title="Value">
+        <button class="rib del" data-clause-del="${i}" title="Remove clause" style="flex-shrink:0">×</button>
+      </div>`).join('');
+  }
+
+  mkModal(`
+    <div class="mo-hd">
+      <h2>${editing ? 'Edit custom value' : 'Create a custom value'}</h2>
+      <p>Assign a numeric value to issues matching a JQL clause.</p>
+    </div>
+    <div class="mo-bd">
+      <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:18px">
+        <div style="flex:1">
+          <label class="fl" for="cvName">Name <span class="req">*</span></label>
+          <input class="fi" id="cvName" value="${esc(cv.name)}" placeholder="e.g. Story Points by Priority" autocomplete="off">
+          <div class="ferr" id="cvNameErr">Name is required.</div>
+        </div>
+        <div style="width:110px">
+          <label class="fl" for="cvDef">Default value</label>
+          <input class="fi" id="cvDef" type="number" value="${cv.defaultValue != null ? cv.defaultValue : 0}" title="Value assigned when no clause matches">
+          <div class="fh">When no clause matches</div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;color:#172b4d;margin-bottom:8px">Clauses</div>
+      <div id="cvClauses">${clauseRows()}</div>
+
+      <button class="btn btn-d" id="cvAddClause" style="margin-top:6px;font-size:13px">+ Add clause</button>
+      <div class="fh" style="margin-top:6px">Clauses are evaluated top to bottom; the first match wins.</div>
+    </div>
+    <div class="mo-ft">
+      <button class="btn btn-d" id="cvCan">Cancel</button>
+      <button class="btn btn-p" id="cvOk">${editing ? 'Save' : 'Create'}</button>
+    </div>`);
+
+  document.getElementById('cvName').focus();
+
+  function syncClausesFromDOM() {
+    const mo = document.querySelector('.mo-bd');
+    cv.clauses.forEach((c, i) => {
+      const jqlEl = mo.querySelector(`[data-clause-jql="${i}"]`);
+      const valEl = mo.querySelector(`[data-clause-val="${i}"]`);
+      if (jqlEl) c.jql = jqlEl.value.trim();
+      if (valEl) c.value = parseFloat(valEl.value) || 0;
+    });
+  }
+
+  function rerender() {
+    document.getElementById('cvClauses').innerHTML = clauseRows();
+    bindClauseEvents();
+  }
+
+  function bindClauseEvents() {
+    const wrap = document.getElementById('cvClauses');
+    wrap.querySelectorAll('[data-clause-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncClausesFromDOM();
+        const ci = parseInt(btn.dataset.clauseDel, 10);
+        cv.clauses.splice(ci, 1);
+        rerender();
+      });
+    });
+  }
+  bindClauseEvents();
+
+  document.getElementById('cvAddClause').addEventListener('click', () => {
+    syncClausesFromDOM();
+    cv.clauses.push({ jql: '', value: 1 });
+    rerender();
+  });
+
+  document.getElementById('cvCan').onclick = closeModals;
+  document.getElementById('cvOk').onclick = () => {
+    syncClausesFromDOM();
+    const name = (document.getElementById('cvName').value || '').trim();
+    const defVal = parseFloat(document.getElementById('cvDef').value) || 0;
+    if (!name) { document.getElementById('cvName').classList.add('inv'); document.getElementById('cvNameErr').classList.add('show'); return; }
+    S.current.customValues = S.current.customValues || [];
+    const entry = { name, defaultValue: defVal, clauses: cv.clauses.filter(c => c.jql) };
+    if (editing) S.current.customValues[idx] = entry;
+    else S.current.customValues.push(entry);
+    doSave({ customValues: S.current.customValues });
+    refreshTab();
+    closeModals();
+  };
+}
+
+// Time Series modal
+const TS_FIELDS    = ['Issue count','Story points','Custom value…','Assignee','Status','Priority','Issue type','Component','Sprint','Fix version'];
+const TS_INTERVALS = ['Daily','Weekly','Bi-weekly','Monthly','Quarterly'];
+const TS_MODES     = ['Snapshot','Cumulative'];
+
+function showTSModal(idx) {
+  const editing = idx != null;
+  const ts = editing ? JSON.parse(JSON.stringify(S.current.timeSeries[idx])) : { name: '', field: 'Issue count', interval: 'Weekly', mode: 'Snapshot', jql: '' };
+  const fieldOpts    = TS_FIELDS.map(f    => `<option value="${esc(f)}"${ts.field    === f    ? ' selected' : ''}>${esc(f)}</option>`).join('');
+  const intervalOpts = TS_INTERVALS.map(i => `<option value="${esc(i)}"${ts.interval === i    ? ' selected' : ''}>${esc(i)}</option>`).join('');
+  const modeOpts     = TS_MODES.map(m     => `<option value="${esc(m)}"${ts.mode     === m    ? ' selected' : ''}>${esc(m)}</option>`).join('');
+
+  mkModal(`
+    <div class="mo-hd">
+      <h2>${editing ? 'Edit time series' : 'Create a time series'}</h2>
+      <p>Track how a metric changes over time across the issues in this rich filter.</p>
+    </div>
+    <div class="mo-bd">
+      <div class="fg">
+        <label class="fl" for="tsName">Name <span class="req">*</span></label>
+        <input class="fi" id="tsName" value="${esc(ts.name)}" placeholder="e.g. Weekly issue count" autocomplete="off">
+        <div class="ferr" id="tsNameErr">Name is required.</div>
+      </div>
+      <div style="display:flex;gap:14px;margin-bottom:18px">
+        <div style="flex:1">
+          <label class="fl" for="tsField">Field</label>
+          <select class="fi" id="tsField">${fieldOpts}</select>
+          <div class="fh">The metric to measure.</div>
+        </div>
+        <div style="flex:1">
+          <label class="fl" for="tsInterval">Interval</label>
+          <select class="fi" id="tsInterval">${intervalOpts}</select>
+          <div class="fh">How often to sample.</div>
+        </div>
+        <div style="flex:1">
+          <label class="fl" for="tsMode">Mode</label>
+          <select class="fi" id="tsMode">${modeOpts}</select>
+          <div class="fh">Snapshot or cumulative.</div>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl" for="tsJql">Additional JQL filter <span style="font-weight:400;color:#6b778c">(optional)</span></label>
+        <input class="fi" id="tsJql" value="${esc(ts.jql || '')}" placeholder="e.g. statusCategory = Done" style="font-family:monospace;font-size:13px" autocomplete="off">
+        <div class="fh">Further restrict which issues are counted. Leave empty to use all issues from the base filter.</div>
+      </div>
+    </div>
+    <div class="mo-ft">
+      <button class="btn btn-d" id="tsCan">Cancel</button>
+      <button class="btn btn-p" id="tsOk">${editing ? 'Save' : 'Create'}</button>
+    </div>`);
+
+  document.getElementById('tsName').focus();
+  document.getElementById('tsCan').onclick = closeModals;
+  document.getElementById('tsOk').onclick = () => {
+    const name     = (document.getElementById('tsName').value || '').trim();
+    const field    = document.getElementById('tsField').value;
+    const interval = document.getElementById('tsInterval').value;
+    const mode     = document.getElementById('tsMode').value;
+    const jql      = (document.getElementById('tsJql').value || '').trim();
+    if (!name) { document.getElementById('tsName').classList.add('inv'); document.getElementById('tsNameErr').classList.add('show'); return; }
+    S.current.timeSeries = S.current.timeSeries || [];
+    const entry = { name, field, interval, mode, jql };
+    if (editing) S.current.timeSeries[idx] = entry;
+    else S.current.timeSeries.push(entry);
+    doSave({ timeSeries: S.current.timeSeries });
+    refreshTab();
+    closeModals();
+  };
+}
+
+// Custom Ratio modal
+function showCRModal() {
+  const cvItems = S.current.customValues || [];
+  // datalist suggestions — works even with zero custom values
+  const dlOpts = cvItems.map(cv => `<option value="${esc(cv.name)}">`).join('');
+  const hint   = cvItems.length
+    ? `<div class="fh">Type or select from your custom values.</div>`
+    : `<div class="fh" style="color:#de350b">No custom values yet \u2014 you can still type a name and create one later.</div>`;
+  mkModal(`
+    <div class="mo-hd">
+      <h2>Create a custom ratio</h2>
+      <p>A ratio shows one numeric value divided by another, as a percentage.</p>
+    </div>
+    <div class="mo-bd">
+      <datalist id="crDL">${dlOpts}</datalist>
+      <div class="fg">
+        <label class="fl" for="crName">Name <span class="req">*</span></label>
+        <input class="fi" id="crName" autocomplete="off" placeholder="e.g. Done ratio">
+        <div class="ferr" id="crNameErr">Name is required.</div>
+      </div>
+      <div class="fg">
+        <label class="fl" for="crNum">Numerator <span class="req">*</span></label>
+        <input class="fi" id="crNum" list="crDL" autocomplete="off" placeholder="Custom value name\u2026">
+        ${hint}
+        <div class="ferr" id="crNumErr">Numerator is required.</div>
+      </div>
+      <div class="fg">
+        <label class="fl" for="crDen">Denominator <span class="req">*</span></label>
+        <input class="fi" id="crDen" list="crDL" autocomplete="off" placeholder="Custom value name\u2026">
+        ${hint}
+        <div class="ferr" id="crDenErr">Denominator is required.</div>
+      </div>
+    </div>
+    <div class="mo-ft">
+      <button class="btn btn-d" id="crCan">Cancel</button>
+      <button class="btn btn-p" id="crOk">Create</button>
+    </div>`);
+  document.getElementById('crName').focus();
+  document.getElementById('crCan').onclick = closeModals;
+  document.getElementById('crOk').onclick = () => {
+    const name = (document.getElementById('crName').value || '').trim();
+    const num  = (document.getElementById('crNum').value  || '').trim();
+    const den  = (document.getElementById('crDen').value  || '').trim();
+    let ok = true;
+    if (!name) { document.getElementById('crName').classList.add('inv'); document.getElementById('crNameErr').classList.add('show'); ok = false; }
+    if (!num)  { document.getElementById('crNum').classList.add('inv');  document.getElementById('crNumErr').classList.add('show');  ok = false; }
+    if (!den)  { document.getElementById('crDen').classList.add('inv');  document.getElementById('crDenErr').classList.add('show');  ok = false; }
+    if (!ok) return;
+    S.current.customRatios = S.current.customRatios || [];
+    S.current.customRatios.push({ name, numerator: num, denominator: den });
+    doSave({ customRatios: S.current.customRatios });
+    refreshTab();
+    closeModals();
+  };
 }
 
 // Static Filter modal
@@ -934,8 +1616,13 @@ function showViewModal() {
     const name = (document.getElementById('mVN').value||'').trim();
     if (!name) { document.getElementById('mVN').classList.add('inv'); document.getElementById('mVNErr').classList.add('show'); return; }
     S.current.views = S.current.views||[];
-    S.current.views.push({name, showTotals:!!document.getElementById('mVT').checked, oneLineRows:!!document.getElementById('mVO').checked, columns:[]});
-    doSave({views:S.current.views}); refreshTab(); closeModals();
+    const idx = S.current.views.length;
+    S.current.views.push({name, showTotals:!!document.getElementById('mVT').checked, oneLineRows:!!document.getElementById('mVO').checked, showGantt:false, columns:[]});
+    doSave({views:S.current.views});
+    S.activeViewIdx = idx;
+    S.viewColumnTab = 'issue';
+    closeModals();
+    refreshTab();
   };
 }
 
@@ -984,7 +1671,13 @@ async function openFilter(id) {
   S.current.smartFilters   = S.current.smartFilters   || [];
   S.current.dynamicFilters = S.current.dynamicFilters || {};
   S.current.views          = S.current.views          || [];
+  S.current.queues         = S.current.queues         || [];
+  S.current.customValues   = S.current.customValues   || [];
+  S.current.customRatios   = S.current.customRatios   || [];
+  S.current.timeSeries     = S.current.timeSeries     || [];
   S.activeTab = 'details';
+  S.activeViewIdx = null;
+  S.viewColumnTab = 'issue';
   S.view = 'detail';
   renderDetail();
 }
@@ -993,6 +1686,8 @@ function goHome() {
   S.view = 'home';
   S.current = null;
   S.activeTab = 'details';
+  S.activeViewIdx = null;
+  S.viewColumnTab = 'issue';
   applySearch();
   renderHome();
 }
@@ -1016,4 +1711,21 @@ async function init() {
   renderHome();
 }
 
-init();
+// ─────────────────────────────────────────────────────────────
+//  React bridge – called by ContentPage.jsx via window.__rfGo()
+// ─────────────────────────────────────────────────────────────
+window.__rfGo = async function (route, filterId) {
+  if (route === 'edit' && filterId) {
+    await openFilter(filterId);
+  } else if (route === 'create') {
+    if (S.view !== 'home') { goHome(); }
+    setTimeout(() => showCreateModal(), 50);
+  } else {
+    // 'home' or catch-all
+    if (S.view !== 'home') goHome();
+  }
+};
+
+// Export init for React to call after #content-area is mounted.
+// Do NOT auto-call init() here — #content-area doesn't exist yet.
+window.__rfInit = init;

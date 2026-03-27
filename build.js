@@ -3,9 +3,11 @@
 const { build } = require('esbuild');
 const path = require('path');
 
-const gadgets = ['controller', 'results', 'chart', 'stats', 'app'];
+const gadgets = ['controller', 'results', 'chart', 'stats'];
+const appEntry = 'ui/app/main.jsx'; // React shell entry for the main app
 
 async function buildAll() {
+  // Build other gadgets (vanilla JS)
   for (const gadget of gadgets) {
     await build({
       entryPoints: [path.join('ui', gadget, 'app.js')],
@@ -18,6 +20,20 @@ async function buildAll() {
     });
     console.log(`✓ Built ${gadget}`);
   }
+
+  // Build main app with React + JSX support
+  await build({
+    entryPoints: [appEntry],
+    bundle: true,
+    minify: false,
+    outfile: 'static/app/bundle.js',
+    platform: 'browser',
+    target: ['chrome90'],
+    jsx: 'automatic',
+    define: { 'process.env.NODE_ENV': '"production"' },
+    loader: { '.js': 'jsx', '.jsx': 'jsx' },
+  });
+  console.log('✓ Built app (React)');
   console.log('All gadgets built!');
 }
 
