@@ -6628,6 +6628,7 @@ Please see https://iframe-resizer.com/upgrade for more details.
   // ui/controller/app.js
   var import_bridge = __toESM(require_out3());
   var FILTER_ID = "default-filter";
+  var gadgetId = "default";
   var STATUSES = ["To Do", "In Progress", "In Review", "Done", "Blocked", "Waiting"];
   var PRIORITIES = ["Highest", "High", "Medium", "Low", "Lowest"];
   var ISSUE_TYPES = ["Bug", "Story", "Task", "Epic", "Sub-task", "Improvement", "New Feature"];
@@ -7085,7 +7086,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
       if (e.target === overlay) overlay.remove();
     };
   }
-  async function loadRichFilters() {
+  async function loadRichFilters(defaultRfId) {
     const rfs = await (0, import_bridge.invoke)("listRichFilters").catch(() => []);
     state.richFilters = rfs || [];
     const sel = document.getElementById("rfPickSel");
@@ -7094,7 +7095,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
     sel.addEventListener("change", () => {
       applyRichFilter(sel.value);
     });
-    const activeId = await (0, import_bridge.invoke)("getActiveRichFilter").catch(() => null);
+    let activeId = defaultRfId || null;
+    if (!activeId) {
+      activeId = await (0, import_bridge.invoke)("getGadgetActiveRF", { gadgetId }).catch(() => null);
+    }
     if (activeId && (rfs || []).find((f) => f.id === activeId)) {
       sel.value = activeId;
       await applyRichFilter(activeId);
@@ -7113,7 +7117,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
         hint.style.display = "";
         hint.textContent = "No filter selected \u2014 all issues shown";
       }
-      (0, import_bridge.invoke)("setActiveRichFilter", { id: null }).catch(() => {
+      (0, import_bridge.invoke)("setGadgetActiveRF", { gadgetId, id: null }).catch(() => {
       });
       return;
     }
@@ -7133,7 +7137,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
       const jqlIn = document.getElementById("jqlIn");
       if (jqlIn && !jqlIn.value) jqlIn.value = rf.jiraFilter.jql;
     }
-    (0, import_bridge.invoke)("setActiveRichFilter", { id }).catch(() => {
+    (0, import_bridge.invoke)("setGadgetActiveRF", { gadgetId, id }).catch(() => {
     });
     (0, import_bridge.invoke)("getFilterState", { richFilterId: id }).then((saved) => {
       if (saved && Object.keys(saved).length) {
@@ -7161,6 +7165,46 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
       if (!wrap) return;
       wrap.style.display = Object.keys(cfg).length === 0 || cfg[field] !== false ? "" : "none";
     });
+  }
+  async function mountEditMode(currentConfig) {
+    const style = document.createElement("style");
+    style.textContent = CSS;
+    document.head.appendChild(style);
+    const rfs = await (0, import_bridge.invoke)("listRichFilters").catch(() => []);
+    const currentRfId = currentConfig.richFilterId || "";
+    document.getElementById("app").innerHTML = `
+    <div style="padding:14px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+      <h3 style="font-size:14px;font-weight:700;color:#172b4d;margin-bottom:12px">
+        \u2699\uFE0F Configure Rich Filter Controller
+      </h3>
+
+      <label style="font-size:11px;font-weight:700;color:#6B778C;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">
+        Default Rich Filter
+      </label>
+      <select id="cfgRfSel" style="width:100%;max-width:320px;padding:5px 8px;border:1px solid #DFE1E6;border-radius:3px;font-size:13px;color:#172b4d;margin-bottom:6px;outline:none;background:#fff">
+        <option value="">None \u2014 show all issues by default</option>
+        ${rfs.map((f) => `<option value="${esc(f.id)}" ${f.id === currentRfId ? "selected" : ""}>${esc(f.name)}</option>`).join("")}
+      </select>
+      <p style="font-size:11px;color:#6B778C;margin-bottom:16px">
+        Users can override this selection from the gadget view at any time.
+      </p>
+
+      <div style="display:flex;gap:8px">
+        <button id="cfgSave" style="padding:6px 16px;background:#0052CC;color:#fff;border:none;border-radius:3px;font-size:13px;font-weight:600;cursor:pointer">
+          Save
+        </button>
+        <button id="cfgCancel" style="padding:6px 14px;background:#fff;color:#42526E;border:1px solid #DFE1E6;border-radius:3px;font-size:13px;cursor:pointer">
+          Cancel
+        </button>
+      </div>
+    </div>`;
+    document.getElementById("cfgSave").onclick = async () => {
+      const rfId = document.getElementById("cfgRfSel").value || null;
+      await import_bridge.view.submit({ richFilterId: rfId });
+    };
+    document.getElementById("cfgCancel").onclick = () => {
+      import_bridge.view.close();
+    };
   }
   function mount() {
     const style = document.createElement("style");
@@ -7228,8 +7272,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
     });
   }
   async function init() {
+    var _a, _b, _c;
+    let context = null;
+    try {
+      context = await import_bridge.view.getContext();
+    } catch (e) {
+      console.warn("view.getContext() failed, defaulting to view mode:", e);
+    }
+    const entryPoint = (_a = context == null ? void 0 : context.extension) == null ? void 0 : _a.entryPoint;
+    const gadgetConfig = ((_b = context == null ? void 0 : context.extension) == null ? void 0 : _b.gadgetConfiguration) || {};
+    gadgetId = ((_c = context == null ? void 0 : context.extension) == null ? void 0 : _c.id) || "default";
+    if (entryPoint === "edit") {
+      await mountEditMode(gadgetConfig);
+      return;
+    }
     mount();
-    loadRichFilters();
+    loadRichFilters(gadgetConfig.richFilterId || null);
     makeDropdown("ddStatus", "Status", STATUSES, renderStatus);
     makeDropdown("ddPriority", "Priority", PRIORITIES, renderPriority);
     makeDropdown("ddType", "Type", ISSUE_TYPES, renderType);
@@ -7243,8 +7301,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
     (0, import_bridge.invoke)("getIssues", { richFilterId: FILTER_ID }).then((issues) => {
       const seen = /* @__PURE__ */ new Set();
       (issues || []).forEach((i) => {
-        var _a;
-        const name = (_a = i.fields.assignee) == null ? void 0 : _a.displayName;
+        var _a2;
+        const name = (_a2 = i.fields.assignee) == null ? void 0 : _a2.displayName;
         if (name && !seen.has(name)) {
           seen.add(name);
           state.assignees.push(name);

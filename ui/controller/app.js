@@ -1,6 +1,13 @@
-import { invoke } from '@forge/bridge';
+import { invoke, view } from '@forge/bridge';
 
 let FILTER_ID = 'default-filter';
+
+// Unique identifier for this gadget instance on the dashboard.
+// This is a module-level variable (rather than a constant) because it is
+// populated asynchronously in init() from view.getContext(), and multiple
+// functions throughout the module (applyRichFilter, loadRichFilters, etc.)
+// need access to it without threading it through every call chain.
+let gadgetId = 'default';
 
 const STATUSES    = ['To Do', 'In Progress', 'In Review', 'Done', 'Blocked', 'Waiting'];
 const PRIORITIES  = ['Highest', 'High', 'Medium', 'Low', 'Lowest'];
@@ -498,7 +505,10 @@ function showModal({ title, fields, onSave }) {
 
 // ── RICH FILTER LOADER ─────────────────────────────────────────────────────
 
-async function loadRichFilters() {
+// defaultRfId — optional rich filter ID from the gadget's saved configuration
+// (set by the admin via the edit/config mode). If provided it is used as the
+// initial active filter instead of whatever was last saved per-gadget.
+async function loadRichFilters(defaultRfId) {
   const rfs = await invoke('listRichFilters').catch(() => []);
   state.richFilters = rfs || [];
   const sel = document.getElementById('rfPickSel');
@@ -510,8 +520,13 @@ async function loadRichFilters() {
     applyRichFilter(sel.value);
   });
 
-  // Restore previously active rich filter
-  const activeId = await invoke('getActiveRichFilter').catch(() => null);
+  // Determine which rich filter to activate on load.
+  // Priority: 1) gadget configuration (admin-set default), 2) per-gadget last-used.
+  let activeId = defaultRfId || null;
+  if (!activeId) {
+    // Fall back to the per-gadget-instance stored active RF.
+    activeId = await invoke('getGadgetActiveRF', { gadgetId }).catch(() => null);
+  }
   if (activeId && (rfs || []).find(f => f.id === activeId)) {
     sel.value = activeId;
     await applyRichFilter(activeId);
@@ -528,7 +543,8 @@ async function applyRichFilter(id) {
     renderQF();
     if (badge) badge.style.display = 'none';
     if (hint) { hint.style.display = ''; hint.textContent = 'No filter selected — all issues shown'; }
-    invoke('setActiveRichFilter', { id: null }).catch(() => {});
+    // Clear the per-gadget active RF in storage.
+    invoke('setGadgetActiveRF', { gadgetId, id: null }).catch(() => {});
     return;
   }
   const rf = await invoke('getRichFilter', { id }).catch(() => null);
@@ -548,8 +564,9 @@ async function applyRichFilter(id) {
     const jqlIn = document.getElementById('jqlIn');
     if (jqlIn && !jqlIn.value) jqlIn.value = rf.jiraFilter.jql;
   }
-  // Save as active
-  invoke('setActiveRichFilter', { id }).catch(() => {});
+  // Save as active for this gadget instance (per-gadget storage key prevents
+  // multiple controller gadgets from conflicting with each other).
+  invoke('setGadgetActiveRF', { gadgetId, id }).catch(() => {});
   // Restore saved filter state for this rich filter
   invoke('getFilterState', { richFilterId: id }).then(saved => {
     if (saved && Object.keys(saved).length) {
@@ -574,6 +591,61 @@ function updateDropdownVisibility(cfg) {
     // If no config or field is explicitly true (or not set), show; if false, hide
     wrap.style.display = (Object.keys(cfg).length === 0 || cfg[field] !== false) ? '' : 'none';
   });
+}
+
+// ── EDIT / CONFIGURATION MODE ──────────────────────────────────────────────
+// This is rendered when the gadget is in Forge's native configuration mode
+// (user clicks "Edit" on the gadget from the dashboard). It lets the admin
+// pick a default Rich Filter that this gadget instance will use when first loaded.
+// The selected config is saved via view.submit() and read back in view mode
+// via context.extension.gadgetConfiguration.
+async function mountEditMode(currentConfig) {
+  // Inject the shared CSS so the form matches the gadget's overall look.
+  const style = document.createElement('style');
+  style.textContent = CSS;
+  document.head.appendChild(style);
+
+  // Load available rich filters so the admin can choose one.
+  const rfs = await invoke('listRichFilters').catch(() => []);
+  const currentRfId = currentConfig.richFilterId || '';
+
+  document.getElementById('app').innerHTML = `
+    <div style="padding:14px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+      <h3 style="font-size:14px;font-weight:700;color:#172b4d;margin-bottom:12px">
+        ⚙️ Configure Rich Filter Controller
+      </h3>
+
+      <label style="font-size:11px;font-weight:700;color:#6B778C;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">
+        Default Rich Filter
+      </label>
+      <select id="cfgRfSel" style="width:100%;max-width:320px;padding:5px 8px;border:1px solid #DFE1E6;border-radius:3px;font-size:13px;color:#172b4d;margin-bottom:6px;outline:none;background:#fff">
+        <option value="">None — show all issues by default</option>
+        ${rfs.map(f => `<option value="${esc(f.id)}" ${f.id === currentRfId ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}
+      </select>
+      <p style="font-size:11px;color:#6B778C;margin-bottom:16px">
+        Users can override this selection from the gadget view at any time.
+      </p>
+
+      <div style="display:flex;gap:8px">
+        <button id="cfgSave" style="padding:6px 16px;background:#0052CC;color:#fff;border:none;border-radius:3px;font-size:13px;font-weight:600;cursor:pointer">
+          Save
+        </button>
+        <button id="cfgCancel" style="padding:6px 14px;background:#fff;color:#42526E;border:1px solid #DFE1E6;border-radius:3px;font-size:13px;cursor:pointer">
+          Cancel
+        </button>
+      </div>
+    </div>`;
+
+  // Save the selected rich filter as the gadget's persistent configuration.
+  document.getElementById('cfgSave').onclick = async () => {
+    const rfId = document.getElementById('cfgRfSel').value || null;
+    await view.submit({ richFilterId: rfId });
+  };
+
+  // Cancel without saving — close the config modal.
+  document.getElementById('cfgCancel').onclick = () => {
+    view.close();
+  };
 }
 
 // ── MOUNT ──────────────────────────────────────────────────────────────────
@@ -645,10 +717,44 @@ function mount() {
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 async function init() {
+  // ── Step 1: Read the Forge gadget context ──────────────────────────────
+  // view.getContext() returns information about the current gadget instance:
+  //   extension.entryPoint  — 'edit' when the admin opens the config modal,
+  //                           'default' for normal view mode.
+  //   extension.gadgetConfiguration — the config object saved via view.submit()
+  //                                   in the last edit session.
+  //   extension.id          — a unique ID for this gadget instance on the
+  //                           dashboard, used to isolate per-gadget storage.
+  let context = null;
+  try {
+    context = await view.getContext();
+  } catch (e) {
+    // view.getContext() may fail in dev tunnels or non-gadget contexts;
+    // gracefully fall back to view mode with default settings.
+    console.warn('view.getContext() failed, defaulting to view mode:', e);
+  }
+
+  const entryPoint  = context?.extension?.entryPoint;
+  const gadgetConfig = context?.extension?.gadgetConfiguration || {};
+
+  // Store the gadget instance ID globally so other functions (e.g.
+  // applyRichFilter, loadRichFilters) can use it for per-instance storage.
+  gadgetId = context?.extension?.id || 'default';
+
+  // ── Step 2: Branch on mode ─────────────────────────────────────────────
+  if (entryPoint === 'edit') {
+    // Configuration mode — show the admin config form, then exit.
+    await mountEditMode(gadgetConfig);
+    return;
+  }
+
+  // ── Step 3: View mode ──────────────────────────────────────────────────
   mount();
 
-  // Load and set up the rich filter selector
-  loadRichFilters();
+  // Load and set up the rich filter selector.
+  // Pass the admin-configured default RF ID (may be null) so it is applied
+  // on first load without the user needing to select it manually.
+  loadRichFilters(gadgetConfig.richFilterId || null);
 
   // Static dropdowns (no loading needed)
   makeDropdown('ddStatus',   'Status',   STATUSES,    renderStatus);
