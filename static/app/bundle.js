@@ -14097,7 +14097,7 @@ Please see https://iframe-resizer.com/upgrade for more details.
     const menu = document.createElement("div");
     menu.className = "ctx";
     menu.style.cssText = "position:fixed;background:#fff;border:1px solid #dfe1e6;border-radius:4px;box-shadow:0 4px 16px rgba(9,30,66,.2);z-index:500;min-width:160px;overflow:hidden";
-    menu.innerHTML = '<div class="ctx-i" data-act="edit">Edit</div><div class="ctx-i ctx-del" data-act="del">Delete</div>';
+    menu.innerHTML = '<div class="ctx-i" data-act="edit">Edit</div><div class="ctx-i ctx-arc" data-act="arc">Archive</div><div class="ctx-i ctx-del" data-act="del">Delete</div>';
     const r = btn.getBoundingClientRect();
     menu.style.top = r.bottom + 4 + "px";
     menu.style.left = Math.max(4, r.right - 164) + "px";
@@ -14112,6 +14112,18 @@ Please see https://iframe-resizer.com/upgrade for more details.
     menu.querySelector('[data-act="edit"]').onclick = () => {
       menu.remove();
       openFilter(id);
+    };
+    menu.querySelector('[data-act="arc"]').onclick = async () => {
+      menu.remove();
+      const f = S.richFilters.find((x) => x.id === id);
+      if (!f || !confirm('Archive "' + f.name + '"?')) return;
+      await (0, import_bridge.invoke)("archiveRichFilter", { id }).catch(() => {
+      });
+      S.richFilters = S.richFilters.filter((x) => x.id !== id);
+      applySearch();
+      toast("ok", '"' + f.name + '" archived.');
+      if (S.view === "detail") goHome();
+      else rebuildTableBody();
     };
     menu.querySelector('[data-act="del"]').onclick = async () => {
       menu.remove();
@@ -15466,11 +15478,11 @@ Please see https://iframe-resizer.com/upgrade for more details.
   window.__rfInit = init;
 
   // ui/app/main.jsx
-  var import_react6 = __toESM(require_react());
+  var import_react9 = __toESM(require_react());
   var import_client = __toESM(require_client());
 
   // ui/app/AppShell.jsx
-  var import_react5 = __toESM(require_react());
+  var import_react8 = __toESM(require_react());
 
   // node_modules/react-router-dom/dist/index.js
   var React2 = __toESM(require_react());
@@ -16964,26 +16976,702 @@ Please see https://iframe-resizer.com/upgrade for more details.
     return null;
   }
 
-  // ui/app/AppShell.jsx
+  // ui/app/pages/TrashPage.jsx
+  var import_react5 = __toESM(require_react());
+  var import_bridge2 = __toESM(require_out3());
   var import_jsx_runtime4 = __toESM(require_jsx_runtime());
+  function formatDate(iso) {
+    if (!iso) return "\u2014";
+    try {
+      return new Date(iso).toLocaleDateString(void 0, { year: "numeric", month: "short", day: "numeric" });
+    } catch {
+      return iso;
+    }
+  }
+  function TrashPage() {
+    const navigate = useNavigate();
+    const [items, setItems] = (0, import_react5.useState)([]);
+    const [loading, setLoading] = (0, import_react5.useState)(true);
+    const [busy, setBusy] = (0, import_react5.useState)(null);
+    async function load() {
+      setLoading(true);
+      try {
+        const data = await (0, import_bridge2.invoke)("listTrashedFilters");
+        setItems(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("listTrashedFilters error", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    (0, import_react5.useEffect)(() => {
+      load();
+    }, []);
+    async function handleRestore(id, name) {
+      if (!window.confirm(`Restore "${name}"?`)) return;
+      setBusy(id);
+      try {
+        await (0, import_bridge2.invoke)("restoreRichFilter", { id });
+        setItems((prev) => prev.filter((f) => f.id !== id));
+      } finally {
+        setBusy(null);
+      }
+    }
+    async function handleDelete(id, name) {
+      if (!window.confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
+      setBusy(id);
+      try {
+        await (0, import_bridge2.invoke)("permanentlyDeleteFilter", { id });
+        setItems((prev) => prev.filter((f) => f.id !== id));
+      } finally {
+        setBusy(null);
+      }
+    }
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: { padding: "24px", background: "#fff", minHeight: "100%" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: { fontSize: 32 }, children: "\u{1F5D1}\uFE0F" }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h1", { style: { margin: 0, fontSize: 20, fontWeight: 700, color: "#172b4d" }, children: "Trash" }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: { margin: 0, fontSize: 13, color: "#6b778c" }, children: "Rich filters you delete are moved here. Restore or permanently remove them." })
+        ] })
+      ] }),
+      loading ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: { color: "#6b778c" }, children: "Loading\u2026" }) : items.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: { textAlign: "center", padding: "60px 0", color: "#6b778c" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: { fontSize: 48, marginBottom: 12 }, children: "\u{1F5D1}\uFE0F" }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: { fontSize: 16, margin: 0 }, children: "Trash is empty" }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: { fontSize: 13, marginTop: 4 }, children: "Deleted rich filters will appear here." })
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("table", { style: { width: "100%", borderCollapse: "collapse" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("tr", { style: { borderBottom: "2px solid #dfe1e6" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("th", { style: thStyle, children: "Name" }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("th", { style: thStyle, children: "Description" }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("th", { style: thStyle, children: "Deleted on" }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("th", { style: { ...thStyle, textAlign: "right" }, children: "Actions" })
+        ] }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("tbody", { children: items.map((f) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("tr", { style: { borderBottom: "1px solid #f0f1f3" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("td", { style: tdStyle, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: f.name }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("td", { style: { ...tdStyle, color: "#6b778c" }, children: f.description || "\u2014" }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("td", { style: { ...tdStyle, color: "#6b778c" }, children: formatDate(f.deletedAt) }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("td", { style: { ...tdStyle, textAlign: "right" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+              "button",
+              {
+                disabled: busy === f.id,
+                onClick: () => handleRestore(f.id, f.name),
+                style: restoreBtn,
+                children: "\u21A9 Restore"
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+              "button",
+              {
+                disabled: busy === f.id,
+                onClick: () => handleDelete(f.id, f.name),
+                style: deleteBtn,
+                children: "Delete permanently"
+              }
+            )
+          ] })
+        ] }, f.id)) })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: { marginTop: 32 }, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { onClick: () => navigate("/"), style: backBtn, children: "\u2190 Back to Rich Filters" }) })
+    ] });
+  }
+  var thStyle = { padding: "8px 12px", textAlign: "left", fontSize: 12, fontWeight: 700, color: "#6b778c", textTransform: "uppercase", letterSpacing: ".04em" };
+  var tdStyle = { padding: "10px 12px", fontSize: 14, color: "#172b4d", verticalAlign: "middle" };
+  var restoreBtn = { marginRight: 8, padding: "5px 12px", background: "#0052cc", color: "#fff", border: "none", borderRadius: 3, fontSize: 13, cursor: "pointer" };
+  var deleteBtn = { padding: "5px 12px", background: "#fff", color: "#de350b", border: "1px solid #de350b", borderRadius: 3, fontSize: 13, cursor: "pointer" };
+  var backBtn = { padding: "7px 16px", background: "#f4f5f7", color: "#172b4d", border: "1px solid #dfe1e6", borderRadius: 3, fontSize: 14, cursor: "pointer" };
+
+  // ui/app/pages/ArchivePage.jsx
+  var import_react6 = __toESM(require_react());
+  var import_bridge3 = __toESM(require_out3());
+  var import_jsx_runtime5 = __toESM(require_jsx_runtime());
+  function formatDate2(iso) {
+    if (!iso) return "\u2014";
+    try {
+      return new Date(iso).toLocaleDateString(void 0, { year: "numeric", month: "short", day: "numeric" });
+    } catch {
+      return iso;
+    }
+  }
+  function ArchivePage() {
+    const navigate = useNavigate();
+    const [items, setItems] = (0, import_react6.useState)([]);
+    const [loading, setLoading] = (0, import_react6.useState)(true);
+    const [busy, setBusy] = (0, import_react6.useState)(null);
+    async function load() {
+      setLoading(true);
+      try {
+        const data = await (0, import_bridge3.invoke)("listArchivedFilters");
+        setItems(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("listArchivedFilters error", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    (0, import_react6.useEffect)(() => {
+      load();
+    }, []);
+    async function handleRestore(id, name) {
+      if (!window.confirm(`Restore "${name}" to active filters?`)) return;
+      setBusy(id);
+      try {
+        await (0, import_bridge3.invoke)("restoreFromArchive", { id });
+        setItems((prev) => prev.filter((f) => f.id !== id));
+      } finally {
+        setBusy(null);
+      }
+    }
+    return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { padding: "24px", background: "#fff", minHeight: "100%" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: { fontSize: 32 }, children: "\u{1F4E6}" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("h1", { style: { margin: 0, fontSize: 20, fontWeight: 700, color: "#172b4d" }, children: "Archive" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { style: { margin: 0, fontSize: 13, color: "#6b778c" }, children: "Long-term storage for rich filters you want to keep but no longer actively use." })
+        ] })
+      ] }),
+      loading ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { style: { color: "#6b778c" }, children: "Loading\u2026" }) : items.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { textAlign: "center", padding: "60px 0", color: "#6b778c" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: 48, marginBottom: 12 }, children: "\u{1F4E6}" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { style: { fontSize: 16, margin: 0 }, children: "Archive is empty" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { style: { fontSize: 13, marginTop: 4 }, children: "Archived rich filters will appear here. Use the \u22EF menu on any filter to archive it." })
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("table", { style: { width: "100%", borderCollapse: "collapse" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("tr", { style: { borderBottom: "2px solid #dfe1e6" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { style: thStyle2, children: "Name" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { style: thStyle2, children: "Description" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { style: thStyle2, children: "Archived on" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { style: { ...thStyle2, textAlign: "right" }, children: "Actions" })
+        ] }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("tbody", { children: items.map((f) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("tr", { style: { borderBottom: "1px solid #f0f1f3" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { style: tdStyle2, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("strong", { children: f.name }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { style: { ...tdStyle2, color: "#6b778c" }, children: f.description || "\u2014" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { style: { ...tdStyle2, color: "#6b778c" }, children: formatDate2(f.archivedAt) }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { style: { ...tdStyle2, textAlign: "right" }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+            "button",
+            {
+              disabled: busy === f.id,
+              onClick: () => handleRestore(f.id, f.name),
+              style: restoreBtn2,
+              children: "\u21A9 Restore"
+            }
+          ) })
+        ] }, f.id)) })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { marginTop: 32 }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { onClick: () => navigate("/"), style: backBtn2, children: "\u2190 Back to Rich Filters" }) })
+    ] });
+  }
+  var thStyle2 = { padding: "8px 12px", textAlign: "left", fontSize: 12, fontWeight: 700, color: "#6b778c", textTransform: "uppercase", letterSpacing: ".04em" };
+  var tdStyle2 = { padding: "10px 12px", fontSize: 14, color: "#172b4d", verticalAlign: "middle" };
+  var restoreBtn2 = { padding: "5px 12px", background: "#0052cc", color: "#fff", border: "none", borderRadius: 3, fontSize: 13, cursor: "pointer" };
+  var backBtn2 = { padding: "7px 16px", background: "#f4f5f7", color: "#172b4d", border: "1px solid #dfe1e6", borderRadius: 3, fontSize: 14, cursor: "pointer" };
+
+  // ui/app/pages/BulkOpsPage.jsx
+  var import_react7 = __toESM(require_react());
+  var import_bridge4 = __toESM(require_out3());
+  var import_jsx_runtime6 = __toESM(require_jsx_runtime());
+  var OPERATIONS = [
+    { value: "downloadUsageData", label: "Download usage data" },
+    { value: "moveToTrash", label: "Move to trash" },
+    { value: "restoreFromTrash", label: "Restore from trash" },
+    { value: "deleteForever", label: "Delete forever", danger: true },
+    { value: "moveToArchive", label: "Move to archive" },
+    { value: "restoreFromArchive", label: "Restore from archive" },
+    { value: "exportToBackup", label: "Export to backup", beta: true }
+  ];
+  var SOURCES = [
+    { value: "active", label: "Active rich filters", fn: "listRichFilters" },
+    { value: "archived", label: "Archived rich filters", fn: "listArchivedFilters" },
+    { value: "trashed", label: "Trashed rich filters", fn: "listTrashedFilters" }
+  ];
+  var BULK_INVOKE = {
+    moveToTrash: "bulkMoveToTrash",
+    restoreFromTrash: "bulkRestoreFromTrash",
+    deleteForever: "bulkDeleteForever",
+    moveToArchive: "bulkMoveToArchive",
+    restoreFromArchive: "bulkRestoreFromArchive"
+  };
+  function formatRelativeDate(iso) {
+    if (!iso) return "\u2014";
+    try {
+      const diff = Date.now() - new Date(iso).getTime();
+      const days = Math.floor(diff / 864e5);
+      if (days === 0) return "today";
+      if (days === 1) return "yesterday";
+      if (days < 7) return `${days} days ago`;
+      return new Date(iso).toLocaleDateString(void 0, { year: "numeric", month: "short", day: "numeric" });
+    } catch {
+      return "\u2014";
+    }
+  }
+  function triggerDownload(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  function initials(name) {
+    if (!name) return "DT";
+    return name.split(" ").map((w) => w[0] || "").join("").slice(0, 2).toUpperCase();
+  }
+  var thStyle3 = {
+    padding: "10px 14px",
+    textAlign: "left",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#6b778c",
+    borderBottom: "2px solid #dfe1e6",
+    background: "#fafbfc",
+    whiteSpace: "nowrap"
+  };
+  var tdStyle3 = {
+    padding: "10px 14px",
+    fontSize: 14,
+    borderBottom: "1px solid #f4f5f7",
+    verticalAlign: "middle"
+  };
+  function IndeterminateCheckbox({ checked, indeterminate, onChange }) {
+    const ref = (0, import_react7.useRef)(null);
+    (0, import_react7.useEffect)(() => {
+      if (ref.current) ref.current.indeterminate = indeterminate;
+    }, [indeterminate]);
+    return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("input", { ref, type: "checkbox", checked, onChange, style: { cursor: "pointer" } });
+  }
+  function Toast({ type, msg }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: {
+      position: "fixed",
+      top: 14,
+      right: 14,
+      zIndex: 1e3,
+      padding: "11px 16px",
+      borderRadius: 4,
+      fontSize: 14,
+      boxShadow: "0 4px 12px rgba(9,30,66,.2)",
+      background: type === "ok" ? "#e3fcef" : "#ffebe6",
+      color: type === "ok" ? "#006644" : "#bf2600",
+      border: `1px solid ${type === "ok" ? "#abf5d1" : "#ff8f73"}`,
+      display: "flex",
+      alignItems: "center",
+      gap: 8
+    }, children: [
+      type === "ok" ? "\u2713" : "\u26A0",
+      " ",
+      msg
+    ] });
+  }
+  function Dropdown({ label, open, onToggle, children, minWidth = 200 }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { position: "relative" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+        "button",
+        {
+          onClick: onToggle,
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 12px",
+            border: "1.5px solid #dfe1e6",
+            borderRadius: 3,
+            background: "#fff",
+            fontSize: 14,
+            cursor: "pointer",
+            minWidth,
+            justifyContent: "space-between"
+          },
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { children: label }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: { fontSize: 10, color: "#97a0af" }, children: "\u25BE" })
+          ]
+        }
+      ),
+      open && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: {
+        position: "absolute",
+        top: "100%",
+        left: 0,
+        zIndex: 200,
+        background: "#fff",
+        border: "1px solid #dfe1e6",
+        borderRadius: 4,
+        boxShadow: "0 4px 16px rgba(9,30,66,.15)",
+        minWidth,
+        marginTop: 2
+      }, children })
+    ] });
+  }
+  function DropdownItem({ active, danger, onClick, children, beta }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+      "button",
+      {
+        onClick,
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          width: "100%",
+          padding: "9px 14px",
+          background: active ? "#deebff" : "none",
+          border: "none",
+          fontSize: 14,
+          cursor: "pointer",
+          textAlign: "left",
+          color: danger ? "#de350b" : "#172b4d"
+        },
+        children: [
+          children,
+          beta && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: {
+            fontSize: 10,
+            background: "#dfe1e6",
+            borderRadius: 3,
+            padding: "1px 5px",
+            color: "#6b778c",
+            fontWeight: 700
+          }, children: "BETA" })
+        ]
+      }
+    );
+  }
+  function BulkOpsPage() {
+    const navigate = useNavigate();
+    const [source, setSource] = (0, import_react7.useState)("active");
+    const [items, setItems] = (0, import_react7.useState)([]);
+    const [loading, setLoading] = (0, import_react7.useState)(true);
+    const [search, setSearch] = (0, import_react7.useState)("");
+    const [selected, setSelected] = (0, import_react7.useState)(/* @__PURE__ */ new Set());
+    const [operation, setOperation] = (0, import_react7.useState)("downloadUsageData");
+    const [busy, setBusy] = (0, import_react7.useState)(false);
+    const [showSourceDrop, setShowSourceDrop] = (0, import_react7.useState)(false);
+    const [showOpDrop, setShowOpDrop] = (0, import_react7.useState)(false);
+    const [toast2, setToast] = (0, import_react7.useState)(null);
+    const load = (0, import_react7.useCallback)(async () => {
+      setLoading(true);
+      setSelected(/* @__PURE__ */ new Set());
+      try {
+        const src = SOURCES.find((s) => s.value === source);
+        const data = await (0, import_bridge4.invoke)(src.fn);
+        setItems(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("BulkOpsPage load error", e);
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    }, [source]);
+    (0, import_react7.useEffect)(() => {
+      load();
+    }, [load]);
+    (0, import_react7.useEffect)(() => {
+      const handler = () => {
+        setShowSourceDrop(false);
+        setShowOpDrop(false);
+      };
+      document.addEventListener("click", handler);
+      return () => document.removeEventListener("click", handler);
+    }, []);
+    const filtered = search ? items.filter((f) => f.name.toLowerCase().includes(search.toLowerCase())) : items;
+    const selectedIds = [...selected];
+    const allChecked = filtered.length > 0 && filtered.every((f) => selected.has(f.id));
+    const someChecked = filtered.some((f) => selected.has(f.id));
+    const currentSource = SOURCES.find((s) => s.value === source);
+    const currentOp = OPERATIONS.find((o) => o.value === operation);
+    const toggleAll = () => {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (allChecked) filtered.forEach((f) => next.delete(f.id));
+        else filtered.forEach((f) => next.add(f.id));
+        return next;
+      });
+    };
+    const toggleOne = (id) => {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+      });
+    };
+    const showToast = (type, msg) => {
+      setToast({ type, msg });
+      setTimeout(() => setToast(null), 3500);
+    };
+    const handleApply = async () => {
+      if (selectedIds.length === 0 || busy) return;
+      if (operation === "deleteForever") {
+        if (!window.confirm(`Permanently delete ${selectedIds.length} filter(s)? This cannot be undone.`)) return;
+      } else if (operation === "moveToTrash") {
+        if (!window.confirm(`Move ${selectedIds.length} filter(s) to trash?`)) return;
+      }
+      setBusy(true);
+      try {
+        if (operation === "downloadUsageData") {
+          const csv = await (0, import_bridge4.invoke)("bulkDownloadUsageData", { ids: selectedIds, source });
+          triggerDownload(csv, "rich-filters-usage.csv", "text/csv");
+          showToast("ok", "Usage data downloaded");
+          return;
+        }
+        if (operation === "exportToBackup") {
+          const json2 = await (0, import_bridge4.invoke)("bulkExportToBackup", { ids: selectedIds, source });
+          triggerDownload(json2, "rich-filters-backup.json", "application/json");
+          showToast("ok", "Backup exported");
+          return;
+        }
+        const fn = BULK_INVOKE[operation];
+        if (fn) {
+          await (0, import_bridge4.invoke)(fn, { ids: selectedIds });
+          showToast("ok", `Done \u2014 ${selectedIds.length} filter(s) updated`);
+          load();
+        }
+      } catch (e) {
+        console.error("BulkOpsPage apply error", e);
+        showToast("err", "Operation failed. Please try again.");
+      } finally {
+        setBusy(false);
+      }
+    };
+    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { background: "#fff", minHeight: "100%" }, children: [
+      toast2 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Toast, { type: toast2.type, msg: toast2.msg }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { display: "flex", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid #dfe1e6" }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("h1", { style: { margin: 0, fontSize: 20, fontWeight: 700, color: "#172b4d" }, children: "Bulk operations" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { padding: "12px 24px 10px", borderBottom: "1px solid #f0f1f3", background: "#fffbef" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }, onClick: (e) => e.stopPropagation(), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: { fontSize: 13, fontWeight: 600, color: "#172b4d", minWidth: 110 }, children: "Bulk operation" }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+            Dropdown,
+            {
+              label: (currentOp == null ? void 0 : currentOp.label) || "Select\u2026",
+              open: showOpDrop,
+              onToggle: () => {
+                setShowOpDrop((p) => !p);
+                setShowSourceDrop(false);
+              },
+              minWidth: 220,
+              children: OPERATIONS.map((op) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                DropdownItem,
+                {
+                  active: op.value === operation,
+                  danger: op.danger,
+                  beta: op.beta,
+                  onClick: () => {
+                    setOperation(op.value);
+                    setShowOpDrop(false);
+                  },
+                  children: op.label
+                },
+                op.value
+              ))
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+            "button",
+            {
+              onClick: handleApply,
+              disabled: selectedIds.length === 0 || busy,
+              style: {
+                padding: "6px 16px",
+                background: selectedIds.length > 0 && !busy ? "#0052cc" : "#f4f5f7",
+                color: selectedIds.length > 0 && !busy ? "#fff" : "#97a0af",
+                border: "none",
+                borderRadius: 3,
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: selectedIds.length > 0 && !busy ? "pointer" : "not-allowed"
+              },
+              children: busy ? "Applying\u2026" : "Apply"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("p", { style: { fontSize: 13, color: "#6b778c", margin: 0 }, children: [
+          "Select the rich filters for the bulk operation. Only the rich filters you administer are available.",
+          " ",
+          filtered.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+            "button",
+            {
+              onClick: toggleAll,
+              style: { background: "none", border: "none", color: "#0052cc", cursor: "pointer", fontSize: 13, padding: 0 },
+              children: allChecked ? "Deselect all" : "Select all"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+        "div",
+        {
+          style: { display: "flex", alignItems: "center", gap: 10, padding: "10px 24px", borderBottom: "1px solid #f0f1f3" },
+          onClick: (e) => e.stopPropagation(),
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+              Dropdown,
+              {
+                label: currentSource == null ? void 0 : currentSource.label,
+                open: showSourceDrop,
+                onToggle: () => {
+                  setShowSourceDrop((p) => !p);
+                  setShowOpDrop(false);
+                },
+                minWidth: 190,
+                children: SOURCES.map((s) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                  DropdownItem,
+                  {
+                    active: s.value === source,
+                    onClick: () => {
+                      setSource(s.value);
+                      setShowSourceDrop(false);
+                      setSearch("");
+                    },
+                    children: s.label
+                  },
+                  s.value
+                ))
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { position: "relative", flex: 1, maxWidth: 300 }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: { position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#97a0af", fontSize: 13, pointerEvents: "none" }, children: "\u{1F50D}" }),
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                "input",
+                {
+                  value: search,
+                  onChange: (e) => setSearch(e.target.value),
+                  placeholder: "Search",
+                  style: { width: "100%", padding: "6px 10px 6px 28px", border: "1.5px solid #dfe1e6", borderRadius: 3, fontSize: 14, outline: "none", background: "#fafbfc" }
+                }
+              )
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+              "button",
+              {
+                onClick: load,
+                disabled: loading,
+                title: "Refresh",
+                style: {
+                  background: "none",
+                  border: "1.5px solid #dfe1e6",
+                  borderRadius: 3,
+                  width: 32,
+                  height: 32,
+                  cursor: "pointer",
+                  fontSize: 15,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#42526e",
+                  opacity: loading ? 0.5 : 1
+                },
+                children: "\u{1F504}"
+              }
+            )
+          ]
+        }
+      ),
+      loading ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 12, color: "#6b778c" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { width: 32, height: 32, border: "3px solid #dfe1e6", borderTopColor: "#0052cc", borderRadius: "50%", animation: "spin .7s linear infinite" } }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { children: "Loading\u2026" })
+      ] }) : filtered.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { textAlign: "center", padding: "60px 24px", color: "#6b778c" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { fontSize: 44, marginBottom: 10, opacity: 0.3 }, children: "\u{1F50D}" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { style: { fontSize: 14 }, children: items.length === 0 ? `No ${(currentSource == null ? void 0 : currentSource.label.toLowerCase()) || "filters"} found.` : "No filters match your search." })
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("table", { style: { width: "100%", borderCollapse: "collapse" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("tr", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("th", { style: { ...thStyle3, width: 36 }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+              IndeterminateCheckbox,
+              {
+                checked: allChecked,
+                indeterminate: someChecked && !allChecked,
+                onChange: toggleAll
+              }
+            ) }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("th", { style: { ...thStyle3, width: 32 }, children: "\u2605" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("th", { style: thStyle3, children: "Name \u2195" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("th", { style: thStyle3, children: "Administrators" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("th", { style: thStyle3, children: "Jira filter" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("th", { style: thStyle3, children: "Visibility" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("th", { style: thStyle3, children: "Last used \u24D8" })
+          ] }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("tbody", { children: filtered.map((f) => {
+            var _a, _b;
+            return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+              "tr",
+              {
+                style: { borderBottom: "1px solid #f4f5f7", background: selected.has(f.id) ? "#f0f5ff" : "transparent" },
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: tdStyle3, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                    "input",
+                    {
+                      type: "checkbox",
+                      checked: selected.has(f.id),
+                      onChange: () => toggleOne(f.id),
+                      style: { cursor: "pointer" }
+                    }
+                  ) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: tdStyle3, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: { color: f.starred ? "#ff8b00" : "#dfe1e6", fontSize: 17, lineHeight: 1 }, children: "\u2605" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: tdStyle3, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("a", { href: `#/edit/${f.id}`, style: { color: "#0052cc", fontWeight: 500 }, children: f.name }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: tdStyle3, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: {
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      background: "#0052cc",
+                      color: "#fff",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      flexShrink: 0
+                    }, children: initials((_a = f.admins) == null ? void 0 : _a[0]) }),
+                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: { fontSize: 13 }, children: ((_b = f.admins) == null ? void 0 : _b[0]) || "\u2014" })
+                  ] }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: tdStyle3, children: f.jiraFilter ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { style: { background: "none", border: "none", color: "#0052cc", cursor: "pointer", fontSize: 13, padding: 0 }, children: "Copy rich filter" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: { color: "#97a0af" }, children: "\u2014" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: tdStyle3, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: { display: "inline-block", padding: "2px 8px", borderRadius: 3, fontSize: 11, fontWeight: 700, background: "#dfe1e6", color: "#42526e", letterSpacing: 0.3 }, children: f.visibility || "PRIVATE" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: { ...tdStyle3, fontSize: 13, color: "#6b778c" }, children: formatRelativeDate(f.lastUsed || f.updatedAt) })
+                ]
+              },
+              f.id
+            );
+          }) })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { padding: "8px 24px", fontSize: 13, color: "#6b778c", borderTop: "1px solid #f0f1f3" }, children: [
+          "Showing ",
+          filtered.length,
+          " rich filter",
+          filtered.length !== 1 ? "s" : "",
+          selected.size > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { style: { marginLeft: 8, color: "#0052cc", fontWeight: 600 }, children: [
+            "\xB7 ",
+            selected.size,
+            " selected"
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { padding: "8px 24px 28px" }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        "button",
+        {
+          onClick: () => navigate("/"),
+          style: { background: "none", border: "1.5px solid #dfe1e6", borderRadius: 3, padding: "6px 14px", fontSize: 14, cursor: "pointer", color: "#42526e" },
+          children: "\u2190 Back to Rich Filters"
+        }
+      ) })
+    ] });
+  }
+
+  // ui/app/AppShell.jsx
+  var import_jsx_runtime7 = __toESM(require_jsx_runtime());
   function AppShell() {
-    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(HashRouter, { children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Layout, { children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(Routes, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Route, { path: "/", element: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ContentPage, { route: "home" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Route, { path: "/create", element: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ContentPage, { route: "create" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Route, { path: "/edit/:id", element: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ContentPage, { route: "edit" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Route, { path: "/get-started", element: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(PlaceholderPage, { title: "Get Started", icon: "\u{1F680}", desc: "Learn how to create and configure Rich Filters to display your Jira issues exactly how you need." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Route, { path: "/trash", element: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(PlaceholderPage, { title: "Trash", icon: "\u{1F5D1}\uFE0F", desc: "Rich filters you delete are moved here. Restore or permanently remove them from this page." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Route, { path: "/archive", element: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(PlaceholderPage, { title: "Archive", icon: "\u{1F4E6}", desc: "Long-term storage for rich filters you want to keep but no longer actively use." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Route, { path: "/bulk", element: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(PlaceholderPage, { title: "Bulk Operations", icon: "\u26A1", desc: "Apply actions such as rename, duplicate, export or delete to multiple rich filters at once." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Route, { path: "/import", element: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(PlaceholderPage, { title: "Import", icon: "\u{1F4E5}", desc: "Import rich filters from a JSON export file or migrate from another Jira instance." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Route, { path: "/config", element: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(PlaceholderPage, { title: "Config", icon: "\u2699\uFE0F", desc: "Global settings for the Rich Filters app \u2014 default visibility, permissions and license info." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Route, { path: "*", element: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Navigate, { to: "/", replace: true }) })
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(HashRouter, { children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Layout, { children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(Routes, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ContentPage, { route: "home" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/create", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ContentPage, { route: "create" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/edit/:id", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ContentPage, { route: "edit" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/get-started", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(PlaceholderPage, { title: "Get Started", icon: "\u{1F680}", desc: "Learn how to create and configure Rich Filters to display your Jira issues exactly how you need." }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/trash", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(TrashPage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/archive", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ArchivePage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/bulk", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(BulkOpsPage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/import", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(PlaceholderPage, { title: "Import", icon: "\u{1F4E5}", desc: "Import rich filters from a JSON export file or migrate from another Jira instance." }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/config", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(PlaceholderPage, { title: "Config", icon: "\u2699\uFE0F", desc: "Global settings for the Rich Filters app \u2014 default visibility, permissions and license info." }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "*", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Navigate, { to: "/", replace: true }) })
     ] }) }) });
   }
 
   // ui/app/main.jsx
-  var import_jsx_runtime5 = __toESM(require_jsx_runtime());
-  (0, import_client.createRoot)(document.getElementById("app")).render(/* @__PURE__ */ (0, import_jsx_runtime5.jsx)(AppShell, {}));
+  var import_jsx_runtime8 = __toESM(require_jsx_runtime());
+  (0, import_client.createRoot)(document.getElementById("app")).render(/* @__PURE__ */ (0, import_jsx_runtime8.jsx)(AppShell, {}));
 })();
 /*! Bundled license information:
 

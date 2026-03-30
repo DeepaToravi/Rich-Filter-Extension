@@ -378,7 +378,7 @@ function showCtxMenu(id, btn) {
   const menu = document.createElement('div');
   menu.className = 'ctx';
   menu.style.cssText = 'position:fixed;background:#fff;border:1px solid #dfe1e6;border-radius:4px;box-shadow:0 4px 16px rgba(9,30,66,.2);z-index:500;min-width:160px;overflow:hidden';
-  menu.innerHTML = '<div class="ctx-i" data-act="edit">Edit</div><div class="ctx-i ctx-del" data-act="del">Delete</div>';
+  menu.innerHTML = '<div class="ctx-i" data-act="edit">Edit</div><div class="ctx-i ctx-arc" data-act="arc">Archive</div><div class="ctx-i ctx-del" data-act="del">Delete</div>';
   const r = btn.getBoundingClientRect();
   menu.style.top = (r.bottom + 4) + 'px';
   menu.style.left = Math.max(4, r.right - 164) + 'px';
@@ -393,6 +393,16 @@ function showCtxMenu(id, btn) {
 
   document.body.appendChild(menu);
   menu.querySelector('[data-act="edit"]').onclick = () => { menu.remove(); openFilter(id); };
+  menu.querySelector('[data-act="arc"]').onclick = async () => {
+    menu.remove();
+    const f = S.richFilters.find(x => x.id === id);
+    if (!f || !confirm('Archive "' + f.name + '"?')) return;
+    await invoke('archiveRichFilter', { id }).catch(() => {});
+    S.richFilters = S.richFilters.filter(x => x.id !== id);
+    applySearch();
+    toast('ok', '"' + f.name + '" archived.');
+    if (S.view === 'detail') goHome(); else rebuildTableBody();
+  };
   menu.querySelector('[data-act="del"]').onclick = async () => {
     menu.remove();
     const f = S.richFilters.find(x => x.id === id);

@@ -6,6 +6,9 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './Layout.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
 import ContentPage from './pages/ContentPage.jsx';
+import TrashPage from './pages/TrashPage.jsx';
+import ArchivePage from './pages/ArchivePage.jsx';
+import BulkOpsPage from './pages/BulkOpsPage.jsx';
 
 export default function AppShell() {
   return (
@@ -19,9 +22,9 @@ export default function AppShell() {
 
           {/* Sidebar-only pages */}
           <Route path="/get-started" element={<PlaceholderPage title="Get Started"       icon="🚀" desc="Learn how to create and configure Rich Filters to display your Jira issues exactly how you need." />} />
-          <Route path="/trash"       element={<PlaceholderPage title="Trash"             icon="🗑️" desc="Rich filters you delete are moved here. Restore or permanently remove them from this page." />} />
-          <Route path="/archive"     element={<PlaceholderPage title="Archive"           icon="📦" desc="Long-term storage for rich filters you want to keep but no longer actively use." />} />
-          <Route path="/bulk"        element={<PlaceholderPage title="Bulk Operations"   icon="⚡" desc="Apply actions such as rename, duplicate, export or delete to multiple rich filters at once." />} />
+          <Route path="/trash"       element={<TrashPage />} />
+          <Route path="/archive"     element={<ArchivePage />} />
+          <Route path="/bulk"        element={<BulkOpsPage />} />
           <Route path="/import"      element={<PlaceholderPage title="Import"            icon="📥" desc="Import rich filters from a JSON export file or migrate from another Jira instance." />} />
           <Route path="/config"      element={<PlaceholderPage title="Config"            icon="⚙️" desc="Global settings for the Rich Filters app — default visibility, permissions and license info." />} />
 
