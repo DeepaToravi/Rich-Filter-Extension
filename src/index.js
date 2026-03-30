@@ -284,7 +284,8 @@ resolver.define('getJiraFilters', async () => {
   }));
 });
 
-// Store / retrieve the currently active rich filter (shared across all gadgets on a dashboard)
+// Store / retrieve the currently active rich filter (shared across all gadgets on a dashboard).
+// Legacy resolver — kept for backward compatibility.
 resolver.define('setActiveRichFilter', async ({ payload }) => {
   const { id } = payload || {};
   await storage.set('ACTIVE_RF', id || null);
@@ -293,6 +294,27 @@ resolver.define('setActiveRichFilter', async ({ payload }) => {
 
 resolver.define('getActiveRichFilter', async () => {
   return (await storage.get('ACTIVE_RF')) || null;
+});
+
+// ── Per-gadget-instance active rich filter ──────────────────────────────────
+// Each Rich Filter Controller gadget on a dashboard has a unique instance ID
+// (provided by view.getContext() in the frontend as extension.id).
+// These resolvers store and retrieve the active rich filter per gadget instance
+// so that multiple controller gadgets don't conflict with each other.
+
+resolver.define('setGadgetActiveRF', async ({ payload }) => {
+  const { gadgetId, id } = payload || {};
+  // If no gadgetId is provided the caller cannot be identified — skip silently.
+  if (!gadgetId) return true;
+  // Key format: ACTIVE_RF_<gadgetInstanceId>
+  await storage.set(`ACTIVE_RF_${gadgetId}`, id || null);
+  return true;
+});
+
+resolver.define('getGadgetActiveRF', async ({ payload }) => {
+  const { gadgetId } = payload || {};
+  if (!gadgetId) return null;
+  return (await storage.get(`ACTIVE_RF_${gadgetId}`)) || null;
 });
 
 
