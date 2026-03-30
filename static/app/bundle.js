@@ -15478,11 +15478,11 @@ Please see https://iframe-resizer.com/upgrade for more details.
   window.__rfInit = init;
 
   // ui/app/main.jsx
-  var import_react9 = __toESM(require_react());
+  var import_react10 = __toESM(require_react());
   var import_client = __toESM(require_client());
 
   // ui/app/AppShell.jsx
-  var import_react8 = __toESM(require_react());
+  var import_react9 = __toESM(require_react());
 
   // node_modules/react-router-dom/dist/index.js
   var React2 = __toESM(require_react());
@@ -17652,26 +17652,337 @@ Please see https://iframe-resizer.com/upgrade for more details.
     ] });
   }
 
-  // ui/app/AppShell.jsx
+  // ui/app/pages/ImportPage.jsx
+  var import_react8 = __toESM(require_react());
+  var import_bridge5 = __toESM(require_out3());
   var import_jsx_runtime7 = __toESM(require_jsx_runtime());
+  var IMPORT_TYPES = [
+    { value: "newIds", label: "Create with new IDs", beta: true },
+    { value: "asExported", label: "Restore as exported", beta: true }
+  ];
+  function Badge({ text }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: {
+      fontSize: 10,
+      background: "#dfe1e6",
+      borderRadius: 3,
+      padding: "1px 5px",
+      color: "#6b778c",
+      fontWeight: 700,
+      marginLeft: 6,
+      verticalAlign: "middle"
+    }, children: text });
+  }
+  function Toast2({ type, msg }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: {
+      position: "fixed",
+      top: 14,
+      right: 14,
+      zIndex: 1e3,
+      padding: "11px 16px",
+      borderRadius: 4,
+      fontSize: 14,
+      boxShadow: "0 4px 12px rgba(9,30,66,.2)",
+      background: type === "ok" ? "#e3fcef" : "#ffebe6",
+      color: type === "ok" ? "#006644" : "#bf2600",
+      border: `1px solid ${type === "ok" ? "#abf5d1" : "#ff8f73"}`,
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      minWidth: 220
+    }, children: [
+      type === "ok" ? "\u2713" : "\u26A0",
+      " ",
+      msg
+    ] });
+  }
+  function Dropdown2({ options, value, onChange }) {
+    const [open, setOpen] = (0, import_react8.useState)(false);
+    const selected = options.find((o) => o.value === value) || options[0];
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { position: "relative" }, onClick: (e) => e.stopPropagation(), children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+        "button",
+        {
+          onClick: () => setOpen((p) => !p),
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 12px",
+            border: "1.5px solid #dfe1e6",
+            borderRadius: 3,
+            background: "#fff",
+            fontSize: 14,
+            cursor: "pointer",
+            minWidth: 220,
+            justifyContent: "space-between"
+          },
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { children: [
+              selected.label,
+              selected.beta && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Badge, { text: "BETA" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: { fontSize: 10, color: "#97a0af" }, children: "\u25BE" })
+          ]
+        }
+      ),
+      open && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: {
+        position: "absolute",
+        top: "100%",
+        left: 0,
+        zIndex: 200,
+        background: "#fff",
+        border: "1px solid #dfe1e6",
+        borderRadius: 4,
+        boxShadow: "0 4px 16px rgba(9,30,66,.15)",
+        minWidth: 220,
+        marginTop: 2
+      }, children: options.map((opt) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+        "button",
+        {
+          onClick: () => {
+            onChange(opt.value);
+            setOpen(false);
+          },
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            width: "100%",
+            padding: "9px 14px",
+            background: opt.value === value ? "#deebff" : "none",
+            border: "none",
+            fontSize: 14,
+            cursor: "pointer",
+            textAlign: "left",
+            color: "#172b4d"
+          },
+          children: [
+            opt.label,
+            opt.beta && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Badge, { text: "BETA" })
+          ]
+        },
+        opt.value
+      )) })
+    ] });
+  }
+  function FileDropZone({ file, onFile }) {
+    const [dragging, setDragging] = (0, import_react8.useState)(false);
+    const inputRef = (0, import_react8.useRef)(null);
+    const handleDrop = (0, import_react8.useCallback)((e) => {
+      e.preventDefault();
+      setDragging(false);
+      const f = e.dataTransfer.files[0];
+      if (f) onFile(f);
+    }, [onFile]);
+    const handleDragOver = (e) => {
+      e.preventDefault();
+      setDragging(true);
+    };
+    const handleDragLeave = () => setDragging(false);
+    const handleFileInput = (e) => {
+      const f = e.target.files[0];
+      if (f) onFile(f);
+      e.target.value = "";
+    };
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+      "div",
+      {
+        onDrop: handleDrop,
+        onDragOver: handleDragOver,
+        onDragLeave: handleDragLeave,
+        onClick: () => {
+          var _a;
+          return (_a = inputRef.current) == null ? void 0 : _a.click();
+        },
+        style: {
+          border: `2px dashed ${dragging ? "#0052cc" : "#b3c7e6"}`,
+          borderRadius: 6,
+          background: dragging ? "#f0f5ff" : "#f0f5ff",
+          padding: "60px 24px",
+          textAlign: "center",
+          cursor: "pointer",
+          transition: "border-color 0.15s, background 0.15s",
+          minHeight: 140,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10
+        },
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "input",
+            {
+              ref: inputRef,
+              type: "file",
+              accept: ".json,application/json",
+              style: { display: "none" },
+              onChange: handleFileInput
+            }
+          ),
+          file ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: { fontSize: 28 }, children: "\u{1F4C4}" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: { fontSize: 14, fontWeight: 600, color: "#172b4d" }, children: file.name }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { style: { fontSize: 12, color: "#6b778c" }, children: [
+              (file.size / 1024).toFixed(1),
+              " KB \xB7 click to replace"
+            ] })
+          ] }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { style: { fontSize: 14, color: "#6b778c" }, children: [
+            "Drop a backup file here, or ",
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: { color: "#0052cc", textDecoration: "underline" }, children: "click to browse" }),
+            " and select it."
+          ] })
+        ]
+      }
+    );
+  }
+  function ResultsSummary({ result }) {
+    var _a, _b, _c;
+    if (!result) return null;
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: {
+      marginTop: 20,
+      padding: "14px 16px",
+      borderRadius: 4,
+      background: ((_a = result.errors) == null ? void 0 : _a.length) ? "#fffbeb" : "#e3fcef",
+      border: `1px solid ${((_b = result.errors) == null ? void 0 : _b.length) ? "#ffe58f" : "#abf5d1"}`,
+      fontSize: 13
+    }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("p", { style: { fontWeight: 600, color: "#172b4d", marginBottom: 6 }, children: [
+        "Import complete: ",
+        result.imported,
+        " filter",
+        result.imported !== 1 ? "s" : "",
+        " imported",
+        result.skipped > 0 && `, ${result.skipped} skipped`
+      ] }),
+      ((_c = result.errors) == null ? void 0 : _c.length) > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("ul", { style: { margin: 0, paddingLeft: 18, color: "#6b778c" }, children: result.errors.map((e, i) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("li", { children: e }, i)) })
+    ] });
+  }
+  function ImportPage() {
+    const navigate = useNavigate();
+    const [importType, setImportType] = (0, import_react8.useState)("newIds");
+    const [file, setFile] = (0, import_react8.useState)(null);
+    const [busy, setBusy] = (0, import_react8.useState)(false);
+    const [toast2, setToast] = (0, import_react8.useState)(null);
+    const [result, setResult] = (0, import_react8.useState)(null);
+    const showToast = (type, msg) => {
+      setToast({ type, msg });
+      setTimeout(() => setToast(null), 4e3);
+    };
+    const handleApply = async () => {
+      if (!file || busy) return;
+      setBusy(true);
+      setResult(null);
+      try {
+        const text = await file.text();
+        let parsed;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          showToast("err", "Invalid JSON file. Please select a valid backup file.");
+          return;
+        }
+        const filters = Array.isArray(parsed) ? parsed : Array.isArray(parsed == null ? void 0 : parsed.filters) ? parsed.filters : null;
+        if (!filters) {
+          showToast("err", 'Unrecognised backup format. Expected a file exported via "Export to backup".');
+          return;
+        }
+        const res = await (0, import_bridge5.invoke)("importFromBackup", { filters, importType });
+        setResult(res);
+        showToast("ok", `Imported ${res.imported} filter${res.imported !== 1 ? "s" : ""} successfully`);
+        setFile(null);
+      } catch (e) {
+        console.error("ImportPage apply error", e);
+        showToast("err", "Import failed. Please try again.");
+      } finally {
+        setBusy(false);
+      }
+    };
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { background: "#fff", minHeight: "100%" }, onClick: () => {
+    }, children: [
+      toast2 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Toast2, { type: toast2.type, msg: toast2.msg }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { display: "flex", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid #dfe1e6" }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h1", { style: { margin: 0, fontSize: 20, fontWeight: 700, color: "#172b4d" }, children: "Import from backup" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { padding: "12px 24px 12px", borderBottom: "1px solid #f0f1f3", background: "#fffbef" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 14, marginBottom: 8 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: { fontSize: 13, fontWeight: 600, color: "#172b4d", minWidth: 90 }, children: "Import type" }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Dropdown2, { options: IMPORT_TYPES, value: importType, onChange: setImportType }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "button",
+            {
+              onClick: handleApply,
+              disabled: !file || busy,
+              style: {
+                padding: "6px 16px",
+                background: file && !busy ? "#0052cc" : "#f4f5f7",
+                color: file && !busy ? "#fff" : "#97a0af",
+                border: "none",
+                borderRadius: 3,
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: file && !busy ? "pointer" : "not-allowed"
+              },
+              children: busy ? "Importing\u2026" : "Apply"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("p", { style: { fontSize: 13, color: "#6b778c", margin: 0 }, children: [
+          "Choose a backup file to import. You can create backups using the",
+          " ",
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "button",
+            {
+              onClick: () => navigate("/bulk"),
+              style: { background: "none", border: "none", color: "#0052cc", cursor: "pointer", fontSize: 13, padding: 0, fontWeight: 600 },
+              children: "Export to backup"
+            }
+          ),
+          " ",
+          "bulk operation."
+        ] })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { padding: "24px" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(FileDropZone, { file, onFile: setFile }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ResultsSummary, { result })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { padding: "0 24px 28px" }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+        "button",
+        {
+          onClick: () => navigate("/"),
+          style: {
+            background: "none",
+            border: "1.5px solid #dfe1e6",
+            borderRadius: 3,
+            padding: "6px 14px",
+            fontSize: 14,
+            cursor: "pointer",
+            color: "#42526e"
+          },
+          children: "\u2190 Back to Rich Filters"
+        }
+      ) })
+    ] });
+  }
+
+  // ui/app/AppShell.jsx
+  var import_jsx_runtime8 = __toESM(require_jsx_runtime());
   function AppShell() {
-    return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(HashRouter, { children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Layout, { children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(Routes, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ContentPage, { route: "home" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/create", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ContentPage, { route: "create" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/edit/:id", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ContentPage, { route: "edit" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/get-started", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(PlaceholderPage, { title: "Get Started", icon: "\u{1F680}", desc: "Learn how to create and configure Rich Filters to display your Jira issues exactly how you need." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/trash", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(TrashPage, {}) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/archive", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ArchivePage, {}) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/bulk", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(BulkOpsPage, {}) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/import", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(PlaceholderPage, { title: "Import", icon: "\u{1F4E5}", desc: "Import rich filters from a JSON export file or migrate from another Jira instance." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "/config", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(PlaceholderPage, { title: "Config", icon: "\u2699\uFE0F", desc: "Global settings for the Rich Filters app \u2014 default visibility, permissions and license info." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Route, { path: "*", element: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Navigate, { to: "/", replace: true }) })
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HashRouter, { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Layout, { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Routes, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ContentPage, { route: "home" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/create", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ContentPage, { route: "create" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/edit/:id", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ContentPage, { route: "edit" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/get-started", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(PlaceholderPage, { title: "Get Started", icon: "\u{1F680}", desc: "Learn how to create and configure Rich Filters to display your Jira issues exactly how you need." }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/trash", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(TrashPage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/archive", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ArchivePage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/bulk", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(BulkOpsPage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/import", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ImportPage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/config", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(PlaceholderPage, { title: "Config", icon: "\u2699\uFE0F", desc: "Global settings for the Rich Filters app \u2014 default visibility, permissions and license info." }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "*", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Navigate, { to: "/", replace: true }) })
     ] }) }) });
   }
 
   // ui/app/main.jsx
-  var import_jsx_runtime8 = __toESM(require_jsx_runtime());
-  (0, import_client.createRoot)(document.getElementById("app")).render(/* @__PURE__ */ (0, import_jsx_runtime8.jsx)(AppShell, {}));
+  var import_jsx_runtime9 = __toESM(require_jsx_runtime());
+  (0, import_client.createRoot)(document.getElementById("app")).render(/* @__PURE__ */ (0, import_jsx_runtime9.jsx)(AppShell, {}));
 })();
 /*! Bundled license information:
 

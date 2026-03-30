@@ -463,6 +463,48 @@ resolver.define('bulkExportToBackup', async ({ payload }) => {
   return JSON.stringify({ exportedAt: new Date().toISOString(), filters: targets }, null, 2);
 });
 
+// Import filters from a JSON backup file
+// importType: 'newIds' → assign fresh IDs; 'asExported' → keep original IDs (restore)
+resolver.define('importFromBackup', async ({ payload }) => {
+  const { filters, importType } = payload || {};
+  if (!Array.isArray(filters) || filters.length === 0) {
+    return { imported: 0, skipped: 0, errors: ['No filters found in the backup file.'] };
+  }
+
+  const existing = (await storage.get('richFilters')) || [];
+  const existingIds = new Set(existing.map(f => f.id));
+  const now = new Date().toISOString();
+  const errors = [];
+  let imported = 0;
+  let skipped  = 0;
+
+  for (const raw of filters) {
+    if (!raw || typeof raw !== 'object' || !raw.name) {
+      errors.push(`Skipped invalid entry: ${JSON.stringify(raw).slice(0, 60)}`);
+      skipped++;
+      continue;
+    }
+
+    if (importType === 'asExported') {
+      // Keep original ID – skip if a filter with that ID already exists
+      if (existingIds.has(raw.id)) {
+        errors.push(`"${raw.name}" already exists (id: ${raw.id}) — skipped`);
+        skipped++;
+        continue;
+      }
+      existing.push({ ...raw, updatedAt: now });
+    } else {
+      // Create with a fresh ID, regardless of conflicts
+      const newId = `rf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      existing.push({ ...raw, id: newId, createdAt: now, updatedAt: now, lastUsed: null });
+    }
+    imported++;
+  }
+
+  await storage.set('richFilters', existing);
+  return { imported, skipped, errors };
+});
+
 // Store / retrieve the currently active rich filter (shared across all gadgets on a dashboard)
 resolver.define('setActiveRichFilter', async ({ payload }) => {
   const { id } = payload || {};

@@ -9,6 +9,7 @@ import ContentPage from './pages/ContentPage.jsx';
 import TrashPage from './pages/TrashPage.jsx';
 import ArchivePage from './pages/ArchivePage.jsx';
 import BulkOpsPage from './pages/BulkOpsPage.jsx';
+import ImportPage from './pages/ImportPage.jsx';
 
 export default function AppShell() {
   return (
@@ -25,7 +26,7 @@ export default function AppShell() {
           <Route path="/trash"       element={<TrashPage />} />
           <Route path="/archive"     element={<ArchivePage />} />
           <Route path="/bulk"        element={<BulkOpsPage />} />
-          <Route path="/import"      element={<PlaceholderPage title="Import"            icon="📥" desc="Import rich filters from a JSON export file or migrate from another Jira instance." />} />
+          <Route path="/import"      element={<ImportPage />} />
           <Route path="/config"      element={<PlaceholderPage title="Config"            icon="⚙️" desc="Global settings for the Rich Filters app — default visibility, permissions and license info." />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
