@@ -516,6 +516,53 @@ resolver.define('getActiveRichFilter', async () => {
   return (await storage.get('ACTIVE_RF')) || null;
 });
 
+// ─────────────────────────────────────────────────────────────
+//  APP CONFIGURATION (Config page)
+// ─────────────────────────────────────────────────────────────
 
+// Load saved app-level permissions config
+resolver.define('getAppConfig', async () => {
+  return (await storage.get('appConfig')) || null;
+});
+
+// Persist app-level permissions config
+resolver.define('saveAppConfig', async ({ payload }) => {
+  const { config } = payload || {};
+  if (!config || typeof config !== 'object') return false;
+  await storage.set('appConfig', config);
+  return true;
+});
+
+// Search Jira groups by query string (used by the group picker in Config page)
+resolver.define('searchJiraGroups', async ({ payload }) => {
+  const { query } = payload || {};
+  // Empty query returns all groups (for initial dropdown on focus)
+  const q = (query || '').trim();
+  try {
+    const qs = q ? `query=${encodeURIComponent(q)}&maxResults=20` : 'maxResults=50';
+    const res  = await api.asUser().requestJira(
+      route`/rest/api/3/groups/picker?${qs}`
+    );
+    const data = await res.json();
+    const groups = Array.isArray(data?.groups) ? data.groups : [];
+    return groups.map(g => g.name).filter(Boolean);
+  } catch {
+    return [];
+  }
+});
+
+// Permanently wipe all app storage keys
+// The list covers every key written by any resolver in this file.
+resolver.define('deleteAllAppData', async () => {
+  const keys = [
+    'richFilters',
+    'trashedFilters',
+    'archivedFilters',
+    'ACTIVE_RF',
+    'appConfig',
+  ];
+  await Promise.all(keys.map(k => storage.delete(k)));
+  return true;
+});
 
 export const handler = resolver.getDefinitions();

@@ -10,6 +10,7 @@ import TrashPage from './pages/TrashPage.jsx';
 import ArchivePage from './pages/ArchivePage.jsx';
 import BulkOpsPage from './pages/BulkOpsPage.jsx';
 import ImportPage from './pages/ImportPage.jsx';
+import ConfigPage from './pages/ConfigPage.jsx';
 
 export default function AppShell() {
   return (
@@ -27,7 +28,7 @@ export default function AppShell() {
           <Route path="/archive"     element={<ArchivePage />} />
           <Route path="/bulk"        element={<BulkOpsPage />} />
           <Route path="/import"      element={<ImportPage />} />
-          <Route path="/config"      element={<PlaceholderPage title="Config"            icon="⚙️" desc="Global settings for the Rich Filters app — default visibility, permissions and license info." />} />
+          <Route path="/config"      element={<ConfigPage />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

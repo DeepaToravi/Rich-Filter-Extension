@@ -15478,11 +15478,11 @@ Please see https://iframe-resizer.com/upgrade for more details.
   window.__rfInit = init;
 
   // ui/app/main.jsx
-  var import_react10 = __toESM(require_react());
+  var import_react11 = __toESM(require_react());
   var import_client = __toESM(require_client());
 
   // ui/app/AppShell.jsx
-  var import_react9 = __toESM(require_react());
+  var import_react10 = __toESM(require_react());
 
   // node_modules/react-router-dom/dist/index.js
   var React2 = __toESM(require_react());
@@ -17963,26 +17963,512 @@ Please see https://iframe-resizer.com/upgrade for more details.
     ] });
   }
 
-  // ui/app/AppShell.jsx
+  // ui/app/pages/ConfigPage.jsx
+  var import_react9 = __toESM(require_react());
+  var import_bridge6 = __toESM(require_out3());
   var import_jsx_runtime8 = __toESM(require_jsx_runtime());
+  var DEFAULT_CONFIG = {
+    whoCanCreate: ["All logged-in users"],
+    whoCanManage: ["Jira admins"],
+    whoCanBulkOps: ["Jira admins"],
+    whoCanExport: ["Anyone"]
+  };
+  function Toast3({ type, msg }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: {
+      position: "fixed",
+      top: 14,
+      right: 14,
+      zIndex: 1e3,
+      padding: "11px 16px",
+      borderRadius: 4,
+      fontSize: 14,
+      boxShadow: "0 4px 12px rgba(9,30,66,.2)",
+      background: type === "ok" ? "#e3fcef" : "#ffebe6",
+      color: type === "ok" ? "#006644" : "#bf2600",
+      border: `1px solid ${type === "ok" ? "#abf5d1" : "#ff8f73"}`,
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      minWidth: 220
+    }, children: [
+      type === "ok" ? "\u2713" : "\u26A0",
+      " ",
+      msg
+    ] });
+  }
+  function Tag({ label, onRemove }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 5,
+      background: "#e9f2ff",
+      border: "1px solid #b3d4ff",
+      borderRadius: 3,
+      padding: "2px 6px 2px 8px",
+      fontSize: 13,
+      color: "#0052cc",
+      fontWeight: 500,
+      flexShrink: 0
+    }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: { fontSize: 13, color: "#0052cc", marginRight: 2 }, children: "\u{1F465}" }),
+      label,
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        "button",
+        {
+          onClick: onRemove,
+          style: {
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "#5a7fa8",
+            fontSize: 14,
+            lineHeight: 1,
+            padding: "0 0 1px 2px",
+            display: "flex",
+            alignItems: "center"
+          },
+          title: `Remove ${label}`,
+          children: "\xD7"
+        }
+      )
+    ] });
+  }
+  function GroupPicker({ value, onChange, id }) {
+    const [query, setQuery] = (0, import_react9.useState)("");
+    const [suggestions, setSuggestions] = (0, import_react9.useState)([]);
+    const [open, setOpen] = (0, import_react9.useState)(false);
+    const [loading, setLoading] = (0, import_react9.useState)(false);
+    const inputRef = (0, import_react9.useRef)(null);
+    const containerRef = (0, import_react9.useRef)(null);
+    const debounceRef = (0, import_react9.useRef)(null);
+    (0, import_react9.useEffect)(() => {
+      const handler = (e) => {
+        if (containerRef.current && !containerRef.current.contains(e.target)) {
+          setOpen(false);
+        }
+      };
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }, []);
+    const fetchGroups = (0, import_react9.useCallback)(async (q2) => {
+      setLoading(true);
+      try {
+        const groups = await (0, import_bridge6.invoke)("searchJiraGroups", { query: q2 });
+        const selectedSet = new Set(value.map((v) => v.toLowerCase()));
+        setSuggestions((groups || []).filter((g) => !selectedSet.has(g.toLowerCase())));
+        setOpen(true);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    }, [value]);
+    (0, import_react9.useEffect)(() => {
+      clearTimeout(debounceRef.current);
+      if (!query.trim()) return;
+      debounceRef.current = setTimeout(() => fetchGroups(query.trim()), 300);
+      return () => clearTimeout(debounceRef.current);
+    }, [query]);
+    const addGroup = (g) => {
+      var _a;
+      if (!value.includes(g)) onChange([...value, g]);
+      setQuery("");
+      setSuggestions([]);
+      setOpen(false);
+      (_a = inputRef.current) == null ? void 0 : _a.focus();
+    };
+    const removeGroup = (g) => onChange(value.filter((v) => v !== g));
+    const clearAll = () => onChange([]);
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter" && query.trim()) {
+        addGroup(query.trim());
+      }
+      if (e.key === "Backspace" && !query && value.length > 0) {
+        removeGroup(value[value.length - 1]);
+      }
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { ref: containerRef, style: { position: "relative", flex: 1 }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+        "div",
+        {
+          onClick: () => {
+            var _a;
+            return (_a = inputRef.current) == null ? void 0 : _a.focus();
+          },
+          style: {
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 5,
+            padding: "5px 36px 5px 8px",
+            position: "relative",
+            border: "1.5px solid #dfe1e6",
+            borderRadius: 3,
+            background: "#fff",
+            minHeight: 38,
+            cursor: "text"
+          },
+          children: [
+            value.map((g) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Tag, { label: g, onRemove: () => removeGroup(g) }, g)),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+              "input",
+              {
+                ref: inputRef,
+                id,
+                value: query,
+                onChange: (e) => {
+                  const v = e.target.value;
+                  setQuery(v);
+                  if (!v.trim()) fetchGroups("");
+                },
+                onKeyDown: handleKeyDown,
+                onFocus: () => fetchGroups(query.trim()),
+                placeholder: value.length === 0 ? "Select groups\u2026" : "",
+                style: {
+                  border: "none",
+                  outline: "none",
+                  fontSize: 13,
+                  flex: 1,
+                  minWidth: 80,
+                  background: "transparent",
+                  padding: "2px 0"
+                }
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { position: "absolute", right: 0, top: 0, bottom: 0, display: "flex", alignItems: "center", gap: 2, paddingRight: 6 }, children: [
+              value.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                "button",
+                {
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    clearAll();
+                  },
+                  title: "Clear selection",
+                  style: { background: "none", border: "none", cursor: "pointer", color: "#97a0af", fontSize: 16, lineHeight: 1, padding: "0 2px" },
+                  children: "\xD7"
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: { color: "#97a0af", fontSize: 10 }, children: "\u25BE" })
+            ] })
+          ]
+        }
+      ),
+      open && (loading || suggestions.length > 0) && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: {
+        position: "absolute",
+        top: "100%",
+        left: 0,
+        right: 0,
+        zIndex: 300,
+        background: "#fff",
+        border: "1px solid #dfe1e6",
+        borderRadius: 4,
+        boxShadow: "0 4px 16px rgba(9,30,66,.15)",
+        marginTop: 2,
+        maxHeight: 240,
+        overflowY: "auto"
+      }, children: [
+        loading && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { padding: "10px 14px", fontSize: 13, color: "#6b778c" }, children: "Searching\u2026" }),
+        !loading && suggestions.map((g) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+          "button",
+          {
+            onMouseDown: (e) => {
+              e.preventDefault();
+              addGroup(g);
+            },
+            style: {
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              width: "100%",
+              padding: "9px 14px",
+              background: "none",
+              border: "none",
+              fontSize: 13,
+              cursor: "pointer",
+              textAlign: "left",
+              color: "#172b4d"
+            },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: { fontSize: 13 }, children: "\u{1F465}" }),
+              g,
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: { fontSize: 11, color: "#97a0af", marginLeft: 4 }, children: "(group)" })
+            ]
+          },
+          g
+        )),
+        !loading && suggestions.length === 0 && query && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { padding: "9px 14px", fontSize: 13, color: "#6b778c" }, children: [
+          'No groups found. Press Enter to add "',
+          query,
+          '" as a custom group.'
+        ] })
+      ] })
+    ] });
+  }
+  function PermissionSection({ title, description, fieldLabel, helpText, value, onChange, fieldId }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { marginBottom: 32 }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h2", { style: { fontSize: 16, fontWeight: 700, color: "#172b4d", marginBottom: 8 }, children: title }),
+      description && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { style: { fontSize: 13, color: "#42526e", marginBottom: 14, lineHeight: 1.6 }, children: description }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { display: "flex", alignItems: "flex-start", gap: 16 }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          "label",
+          {
+            htmlFor: fieldId,
+            style: { fontSize: 13, color: "#172b4d", fontWeight: 500, minWidth: 180, paddingTop: 10 },
+            children: fieldLabel
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { flex: 1 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(GroupPicker, { id: fieldId, value, onChange }),
+          helpText && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { style: { fontSize: 12, color: "#6b778c", marginTop: 5 }, children: helpText })
+        ] })
+      ] })
+    ] });
+  }
+  function PermissionsTab({ config, onChange, onSave, saving }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { padding: "24px 28px", maxWidth: 860 }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        PermissionSection,
+        {
+          title: "Creating rich filters",
+          description: "Here you can choose which logged-in users are allowed to create new rich filters (to modify who is allowed to edit an existing rich filter, use the Administrators setting on the rich filter's Details configuration screen).",
+          fieldLabel: "Who can create rich filters:",
+          helpText: "Select one or several groups. Clear the selection to allow all logged-in users to create rich filters.",
+          value: config.whoCanCreate,
+          onChange: (v) => onChange("whoCanCreate", v),
+          fieldId: "whoCanCreate"
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        PermissionSection,
+        {
+          title: "Managing rich filters",
+          description: "Here you can choose which logged-in users are implicit administrators of all the rich filter objects. Implicit administrators can edit or delete any rich filter, even if they are not explicitly selected as administrators of the rich filter.",
+          fieldLabel: "Who can manage all rich filters:",
+          helpText: "Select one or several groups, in addition to Jira admins. Clear the selection to allow only Jira admins to manage all the rich filters (this is the default).",
+          value: config.whoCanManage,
+          onChange: (v) => onChange("whoCanManage", v),
+          fieldId: "whoCanManage"
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        PermissionSection,
+        {
+          title: "Bulk operations on rich filters",
+          description: "Here you can choose which logged-in users are allowed to perform bulk operations on rich filters. Authorized users can only perform bulk operations on the rich filters for which they have the admin permission.",
+          fieldLabel: "Who can execute bulk ops:",
+          helpText: "Select one or several groups, in addition to Jira admins. Clear the selection to allow only Jira admins to execute bulk operations on rich filters (this is the default).",
+          value: config.whoCanBulkOps,
+          onChange: (v) => onChange("whoCanBulkOps", v),
+          fieldId: "whoCanBulkOps"
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        PermissionSection,
+        {
+          title: "Exporting rich filter gadget results",
+          description: "Here you can choose which users are allowed to export results displayed by rich filter gadgets (applies to all export types \u2014 PDF, Excel, CSV). Authorized users can only export results they have access to, i.e. results they can actually see in dashboards. If Anyone is selected, this also applies to non-logged-in (anonymous) users, who will be able to see and export only public issues.",
+          fieldLabel: "Who can export results:",
+          helpText: "Select one or several groups. Clear the selection to allow anyone to export results.",
+          value: config.whoCanExport,
+          onChange: (v) => onChange("whoCanExport", v),
+          fieldId: "whoCanExport"
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { borderTop: "1px solid #f0f1f3", paddingTop: 20, display: "flex", gap: 10 }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        "button",
+        {
+          onClick: onSave,
+          disabled: saving,
+          style: {
+            padding: "7px 18px",
+            background: saving ? "#f4f5f7" : "#0052cc",
+            color: saving ? "#97a0af" : "#fff",
+            border: "none",
+            borderRadius: 3,
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: saving ? "not-allowed" : "pointer"
+          },
+          children: saving ? "Saving\u2026" : "Save"
+        }
+      ) })
+    ] });
+  }
+  function DeleteAllAppDataTab({ onDelete, deleting }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { padding: "24px 28px", maxWidth: 760 }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { style: { fontSize: 14, color: "#172b4d", lineHeight: 1.7, marginBottom: 14 }, children: [
+        "On this screen you can initiate the",
+        " ",
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("strong", { children: "permanent deletion of all your data" }),
+        " in the",
+        " ",
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("em", { children: "Rich Filters for Jira Dashboards" }),
+        " app for this Jira instance. This covers the rich filter objects and the permissions configured in the app. Dashboards and gadgets that use rich filters are not stored in the app but directly in Jira, so they will not be deleted by this operation. These gadgets will however stop working, since the rich filters they rely on will no longer exist."
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { style: { fontSize: 14, color: "#172b4d", lineHeight: 1.7, marginBottom: 14 }, children: "For security reasons, the data will not be deleted immediately but only after a one-week delay. During this time the deletion can be aborted on this page by any Jira admin." }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { style: { fontSize: 14, color: "#172b4d", lineHeight: 1.7, marginBottom: 14 }, children: "The app cannot be used while the deletion is pending. It becomes usable again after the deletion is completed or aborted." }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { style: { fontSize: 14, color: "#172b4d", lineHeight: 1.7, marginBottom: 24 }, children: "The data deletion does not uninstall the app. You can uninstall the app at any time. An initiated deletion will be completed even if you uninstall the app while the deletion is pending." }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: {
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 10,
+        padding: "12px 16px",
+        background: "#fffbeb",
+        border: "1px solid #ffe58f",
+        borderRadius: 4,
+        marginBottom: 24
+      }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: { fontSize: 18, flexShrink: 0 }, children: "\u26A0\uFE0F" }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { style: { margin: 0, fontSize: 14, color: "#7d5f00", lineHeight: 1.6 }, children: "Once the deletion is completed, it will be impossible to recover the data." })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        "button",
+        {
+          onClick: onDelete,
+          disabled: deleting,
+          style: {
+            padding: "8px 20px",
+            background: deleting ? "#f4f5f7" : "#ffc400",
+            color: deleting ? "#97a0af" : "#172b4d",
+            border: "none",
+            borderRadius: 3,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: deleting ? "not-allowed" : "pointer",
+            boxShadow: deleting ? "none" : "0 1px 3px rgba(0,0,0,.15)"
+          },
+          children: deleting ? "Deleting\u2026" : "Delete all app data"
+        }
+      )
+    ] });
+  }
+  var TABS2 = [
+    { id: "permissions", label: "Permissions" },
+    { id: "deleteAppData", label: "Delete all app data" }
+  ];
+  function ConfigPage() {
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = (0, import_react9.useState)("permissions");
+    const [config, setConfig] = (0, import_react9.useState)(DEFAULT_CONFIG);
+    const [loading, setLoading] = (0, import_react9.useState)(true);
+    const [saving, setSaving] = (0, import_react9.useState)(false);
+    const [deleting, setDeleting] = (0, import_react9.useState)(false);
+    const [toast2, setToast] = (0, import_react9.useState)(null);
+    const showToast = (type, msg) => {
+      setToast({ type, msg });
+      setTimeout(() => setToast(null), 4e3);
+    };
+    (0, import_react9.useEffect)(() => {
+      (0, import_bridge6.invoke)("getAppConfig").then((saved) => {
+        if (saved) setConfig({ ...DEFAULT_CONFIG, ...saved });
+      }).catch(() => {
+      }).finally(() => setLoading(false));
+    }, []);
+    const handleConfigChange = (0, import_react9.useCallback)((field, value) => {
+      setConfig((prev) => ({ ...prev, [field]: value }));
+    }, []);
+    const handleSave = async () => {
+      setSaving(true);
+      try {
+        await (0, import_bridge6.invoke)("saveAppConfig", { config });
+        showToast("ok", "Configuration saved");
+      } catch (e) {
+        console.error("ConfigPage save error", e);
+        showToast("err", "Failed to save. Please try again.");
+      } finally {
+        setSaving(false);
+      }
+    };
+    const handleDeleteAll = async () => {
+      if (!window.confirm(
+        "Are you sure you want to permanently delete ALL app data?\n\nThis includes all rich filters, archived filters, trashed filters, and settings.\n\nThis action cannot be undone."
+      )) return;
+      setDeleting(true);
+      try {
+        await (0, import_bridge6.invoke)("deleteAllAppData");
+        showToast("ok", "All app data has been deleted");
+        setConfig(DEFAULT_CONFIG);
+      } catch (e) {
+        console.error("ConfigPage deleteAll error", e);
+        showToast("err", "Deletion failed. Please try again.");
+      } finally {
+        setDeleting(false);
+      }
+    };
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { background: "#fff", minHeight: "100%" }, children: [
+      toast2 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Toast3, { type: toast2.type, msg: toast2.msg }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { padding: "16px 24px", borderBottom: "1px solid #dfe1e6" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h1", { style: { margin: 0, fontSize: 20, fontWeight: 700, color: "#172b4d" }, children: "App configuration" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { display: "flex", borderBottom: "2px solid #dfe1e6", padding: "0 24px", background: "#fff" }, children: TABS2.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        "button",
+        {
+          onClick: () => setActiveTab(tab.id),
+          style: {
+            padding: "10px 16px",
+            background: "none",
+            border: "none",
+            borderBottom: `3px solid ${activeTab === tab.id ? "#0052cc" : "transparent"}`,
+            marginBottom: -2,
+            cursor: "pointer",
+            fontSize: 14,
+            color: activeTab === tab.id ? "#0052cc" : "#42526e",
+            fontWeight: activeTab === tab.id ? 600 : 400,
+            whiteSpace: "nowrap"
+          },
+          children: tab.label
+        },
+        tab.id
+      )) }),
+      loading ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { padding: 60, textAlign: "center", color: "#6b778c" }, children: "Loading\u2026" }) : activeTab === "permissions" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        PermissionsTab,
+        {
+          config,
+          onChange: handleConfigChange,
+          onSave: handleSave,
+          saving
+        }
+      ) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(DeleteAllAppDataTab, { onDelete: handleDeleteAll, deleting }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { padding: "0 28px 28px" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        "button",
+        {
+          onClick: () => navigate("/"),
+          style: {
+            background: "none",
+            border: "1.5px solid #dfe1e6",
+            borderRadius: 3,
+            padding: "6px 14px",
+            fontSize: 14,
+            cursor: "pointer",
+            color: "#42526e"
+          },
+          children: "\u2190 Back to Rich Filters"
+        }
+      ) })
+    ] });
+  }
+
+  // ui/app/AppShell.jsx
+  var import_jsx_runtime9 = __toESM(require_jsx_runtime());
   function AppShell() {
-    return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HashRouter, { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Layout, { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Routes, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ContentPage, { route: "home" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/create", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ContentPage, { route: "create" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/edit/:id", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ContentPage, { route: "edit" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/get-started", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(PlaceholderPage, { title: "Get Started", icon: "\u{1F680}", desc: "Learn how to create and configure Rich Filters to display your Jira issues exactly how you need." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/trash", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(TrashPage, {}) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/archive", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ArchivePage, {}) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/bulk", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(BulkOpsPage, {}) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/import", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ImportPage, {}) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "/config", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(PlaceholderPage, { title: "Config", icon: "\u2699\uFE0F", desc: "Global settings for the Rich Filters app \u2014 default visibility, permissions and license info." }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Route, { path: "*", element: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Navigate, { to: "/", replace: true }) })
+    return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(HashRouter, { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Layout, { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(Routes, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Route, { path: "/", element: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ContentPage, { route: "home" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Route, { path: "/create", element: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ContentPage, { route: "create" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Route, { path: "/edit/:id", element: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ContentPage, { route: "edit" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Route, { path: "/get-started", element: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(PlaceholderPage, { title: "Get Started", icon: "\u{1F680}", desc: "Learn how to create and configure Rich Filters to display your Jira issues exactly how you need." }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Route, { path: "/trash", element: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(TrashPage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Route, { path: "/archive", element: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ArchivePage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Route, { path: "/bulk", element: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(BulkOpsPage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Route, { path: "/import", element: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ImportPage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Route, { path: "/config", element: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ConfigPage, {}) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Route, { path: "*", element: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Navigate, { to: "/", replace: true }) })
     ] }) }) });
   }
 
   // ui/app/main.jsx
-  var import_jsx_runtime9 = __toESM(require_jsx_runtime());
-  (0, import_client.createRoot)(document.getElementById("app")).render(/* @__PURE__ */ (0, import_jsx_runtime9.jsx)(AppShell, {}));
+  var import_jsx_runtime10 = __toESM(require_jsx_runtime());
+  (0, import_client.createRoot)(document.getElementById("app")).render(/* @__PURE__ */ (0, import_jsx_runtime10.jsx)(AppShell, {}));
 })();
 /*! Bundled license information:
 
