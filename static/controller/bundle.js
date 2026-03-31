@@ -6740,32 +6740,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
 .modal-footer .btn-save{padding:5px 12px;background:#0052CC;border:none;border-radius:3px;cursor:pointer;font-size:12px;color:#fff;font-weight:600}
 `;
   var gadgetConfig = {};
-  var CONFIG_CSS = `
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;color:#172b4d;background:#fff}
-.cfg-wrap{padding:16px 20px 20px;background:#fff;max-width:420px}.cfg-field{margin-bottom:16px}
-.cfg-label{font-size:12px;font-weight:600;color:#172b4d;margin-bottom:6px;display:block;line-height:1.4}
-.cfg-req{color:#DE350B;margin-left:2px}
-.cfg-select-wrap{position:relative}
-.cfg-select{width:100%;padding:8px 32px 8px 10px;border:2px solid #DFE1E6;border-radius:3px;font-size:14px;color:#172b4d;background:#fff;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23172b4d' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
-.cfg-select:focus{border-color:#4C9AFF;box-shadow:0 0 0 2px rgba(76,154,255,.2)}
-.cfg-hint{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-top:5px;line-height:1.4}.cfg-hint span{font-size:11px;color:#42526E;flex:1}
-.cfg-link{font-size:11px;color:#0052CC;text-decoration:none;white-space:nowrap;flex-shrink:0}.cfg-link:hover{text-decoration:underline}
-.cfg-error{font-size:11px;color:#DE350B;margin-top:4px}
-.cfg-info-box{display:flex;gap:10px;align-items:flex-start;background:#DEEBFF;border-radius:3px;padding:12px;margin-bottom:16px}
-.cfg-info-icon{width:20px;height:20px;background:#0052CC;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px}
-.cfg-info-text{font-size:13px;color:#0052CC;line-height:1.5}
-.cfg-section-label{font-size:12px;font-weight:600;color:#172b4d;display:block;margin-bottom:10px}
-.cfg-radio-group{display:flex;flex-direction:column;gap:10px}
-.cfg-radio-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#172b4d}
-.cfg-radio-item input[type=radio]{width:16px;height:16px;cursor:pointer;accent-color:#0052CC;flex-shrink:0}
-.cfg-checkbox-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#172b4d;margin-bottom:20px}
-.cfg-checkbox-item input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#0052CC;flex-shrink:0}
-.cfg-footer{display:flex;align-items:center;justify-content:space-between}
-.cfg-footer-left{display:flex;align-items:center;gap:10px}
-.cfg-submit{padding:8px 16px;background:#0052CC;color:#fff;border:none;border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.2}.cfg-submit:hover{background:#0065FF}
-.cfg-cancel{background:none;border:none;color:#172b4d;font-size:14px;cursor:pointer;padding:8px 4px;line-height:1.2}.cfg-cancel:hover{color:#0052CC}
-.cfg-grid-icon{color:#5E6C84;opacity:.7;display:flex;align-items:center}
-`;
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
@@ -7024,12 +6998,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
   function renderQF() {
     const qfRow = document.getElementById("qfRow");
     if (!qfRow) return;
+    const isCustomize = gadgetConfig.quickFiltersMode === "customize";
+    const customKeys = gadgetConfig.customizedFilters || [];
     const baseFilters = state.rfConfig && state.rfConfig.staticFilters && state.rfConfig.staticFilters.length ? state.rfConfig.staticFilters : DEFAULT_QF;
     const smartList = state.rfConfig && state.rfConfig.smartFilters ? state.rfConfig.smartFilters : state.smartFilters;
-    const defaultBtns = baseFilters.map(
+    const visibleBase = isCustomize ? baseFilters.filter((f, i) => customKeys.includes("__static_all__") || customKeys.includes(`static_${i}`)) : baseFilters;
+    const visibleSmart = isCustomize ? smartList.filter((f, i) => customKeys.includes(`smart_${i}`)) : smartList;
+    const defaultBtns = visibleBase.map(
       (f, i) => `<button class="qf-btn ${i === 0 ? "active" : ""}" onclick="APP.applyQF(${JSON.stringify(f.jql)},this)">${esc(f.name)}</button>`
     ).join("");
-    const smartBtns = smartList.map(
+    const smartBtns = visibleSmart.map(
       (f, i) => `<span style="display:inline-flex;align-items:center;gap:1px">
       <button class="qf-btn" onclick="APP.applyQF(${JSON.stringify(f.jql)},this.parentElement.querySelector('.qf-btn'))" style="border-radius:10px 0 0 10px">${esc(f.name)}</button>
       <button class="btn-icon" title="Delete" onclick="APP.deleteSmartFilter(${i})" style="border-radius:0 10px 10px 0;padding:3px 5px;border-left:none;color:#FF7452">\u2715</button>
@@ -7186,41 +7164,172 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
       component: "ddComponent",
       sprint: "ddSprint"
     };
+    const isCustomize = gadgetConfig.quickFiltersMode === "customize";
+    const customKeys = gadgetConfig.customizedFilters || [];
     Object.entries(fieldToId).forEach(([field, ddId]) => {
       const wrap = document.getElementById(ddId);
       if (!wrap) return;
-      wrap.style.display = Object.keys(cfg).length === 0 || cfg[field] !== false ? "" : "none";
+      const rfAllows = Object.keys(cfg).length === 0 || cfg[field] !== false;
+      const gadgetAllows = !isCustomize || customKeys.includes("__dynamic_all__") || customKeys.includes(`dynamic_${field}`);
+      wrap.style.display = rfAllows && gadgetAllows ? "" : "none";
     });
   }
   async function mountConfigForm(ctx) {
     var _a;
     const savedConfig = ((_a = ctx == null ? void 0 : ctx.extension) == null ? void 0 : _a.gadgetConfiguration) || {};
     const richFilters = await (0, import_bridge.invoke)("listRichFilters").catch(() => []);
-    if (!document.getElementById("cfg-styles")) {
-      const s = document.createElement("style");
-      s.id = "cfg-styles";
-      s.textContent = CONFIG_CSS;
-      document.head.appendChild(s);
+    let selectedRfId = savedConfig.richFilterId || "";
+    let quickMode = savedConfig.quickFiltersMode || "all";
+    let enableJql = savedConfig.enableJql !== false;
+    let customizedFilters = Array.isArray(savedConfig.customizedFilters) ? [...savedConfig.customizedFilters] : [];
+    let rfData = null;
+    let qfDropdownOpen = false;
+    let formError = "";
+    if (selectedRfId) {
+      rfData = await (0, import_bridge.invoke)("getRichFilter", { id: selectedRfId }).catch(() => null);
     }
-    function renderForm(selectedRfId, quickMode, enableJql, errorMsg) {
+    const DYN_FIELDS = {
+      project: "Project",
+      status: "Status",
+      assignee: "Assignee",
+      priority: "Priority",
+      issuetype: "Type",
+      component: "Component",
+      sprint: "Sprint"
+    };
+    const ALL_DYN_FIELDS = [
+      { key: "project", label: "Project" },
+      { key: "status", label: "Status" },
+      { key: "assignee", label: "Assignee" },
+      { key: "priority", label: "Priority" },
+      { key: "issuetype", label: "Type" },
+      { key: "component", label: "Component" },
+      { key: "sprint", label: "Sprint" }
+    ];
+    function buildFilterOptions(rf) {
+      const opts = [];
+      opts.push({ group: "STATIC FILTERS", key: "__static_all__", label: "All static", icon: "" });
+      if (rf && rf.staticFilters && rf.staticFilters.length) {
+        rf.staticFilters.forEach(
+          (f, i) => opts.push({ group: "STATIC FILTERS", key: `static_${i}`, label: f.name || `Filter ${i + 1}`, icon: "" })
+        );
+      }
+      opts.push({ group: "DYNAMIC FILTERS", key: "__dynamic_all__", label: "All dynamic", icon: "" });
+      ALL_DYN_FIELDS.forEach(
+        (f) => opts.push({ group: "DYNAMIC FILTERS", key: `dynamic_${f.key}`, label: f.label, icon: "&#8801;" })
+      );
+      if (rf && rf.smartFilters && rf.smartFilters.length) {
+        rf.smartFilters.forEach(
+          (f, i) => opts.push({ group: "SMART FILTERS", key: `smart_${i}`, label: f.name || `Smart ${i + 1}`, icon: "" })
+        );
+      } else {
+        opts.push({ group: "SMART FILTERS", key: "__smart_placeholder__", label: "(No smart filters configured)", icon: "", disabled: true });
+      }
+      return opts;
+    }
+    let activeTab = "STATIC FILTERS";
+    function renderCustomizePanel() {
+      const panel = document.getElementById("cfgCustomizePanel");
+      if (!panel) return;
+      if (quickMode !== "customize") {
+        panel.innerHTML = "";
+        return;
+      }
+      const filterOpts = buildFilterOptions(rfData);
+      const hasSelected = customizedFilters.filter((k) => k !== "__smart_placeholder__").length > 0;
+      const warnHtml = !hasSelected ? `<div class="cfg-warn"><span class="cfg-warn-icon">&#9651;</span> Select one or more quick filters to display</div>` : "";
+      const chipsHtml = customizedFilters.filter((k) => k !== "__smart_placeholder__").map((key) => {
+        const opt = filterOpts.find((o) => o.key === key);
+        return opt ? `<span class="cfg-chip">${esc(opt.label)}<span class="cfg-chip-x" data-key="${esc(key)}">&#215;</span></span>` : "";
+      }).join("");
+      const TABS = ["STATIC FILTERS", "DYNAMIC FILTERS", "SMART FILTERS", "SEPARATORS"];
+      const tabsHtml = TABS.map((t) => {
+        const active = t === activeTab ? "cfg-qf-tab--active" : "";
+        return `<button class="cfg-qf-tab ${active}" data-tab="${esc(t)}">${esc(t)}</button>`;
+      }).join("");
+      const tabOpts = filterOpts.filter((o) => o.group === activeTab);
+      const contentHtml = tabOpts.length ? tabOpts.map((o) => {
+        if (o.disabled) return `<div class="cfg-qf-empty">${esc(o.label)}</div>`;
+        const chk = customizedFilters.includes(o.key);
+        const isAllRow = o.key.startsWith("__");
+        return `<label class="cfg-qf-opt ${chk ? "selected" : ""} ${isAllRow ? "cfg-qf-opt--all" : ""}" data-key="${esc(o.key)}">
+            <input type="checkbox" ${chk ? "checked" : ""}>
+            ${o.icon ? `<span class="cfg-qf-icon">${o.icon}</span>` : ""}
+            <span>${esc(o.label)}</span>
+          </label>`;
+      }).join("") : `<div class="cfg-qf-empty">No ${esc(activeTab.toLowerCase())} available.</div>`;
+      panel.innerHTML = `
+      ${warnHtml}
+      <div class="cfg-qf-picker">
+        <div class="cfg-qf-trigger" id="cfgQfTrigger">
+          <span class="cfg-qf-trigger-inner">${chipsHtml || '<span class="cfg-qf-placeholder">Select quick filters...</span>'}</span>
+          <span class="cfg-qf-arrow">&#9660;</span>
+        </div>
+        <div class="cfg-qf-dropdown ${qfDropdownOpen ? "open" : ""}" id="cfgQfDropdown">
+          <div class="cfg-qf-tabs" id="cfgQfTabs">${tabsHtml}</div>
+          <div class="cfg-qf-list" id="cfgQfList">${contentHtml}</div>
+        </div>
+      </div>
+      <div class="cfg-qf-hint">Select <em>Section</em> to add collapsible sections that group quick filters. A section will group all quick filters that follow it in the list.</div>
+    `;
+      document.getElementById("cfgQfTrigger").onclick = (e) => {
+        e.stopPropagation();
+        qfDropdownOpen = !qfDropdownOpen;
+        const dd = document.getElementById("cfgQfDropdown");
+        if (dd) dd.classList.toggle("open", qfDropdownOpen);
+      };
+      panel.querySelectorAll(".cfg-qf-tab").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          activeTab = btn.dataset.tab;
+          qfDropdownOpen = true;
+          renderCustomizePanel();
+        };
+      });
+      panel.querySelectorAll(".cfg-qf-opt").forEach((el) => {
+        el.querySelector("input").onchange = (e) => {
+          e.stopPropagation();
+          const key = el.dataset.key;
+          if (key === "__smart_placeholder__") return;
+          if (customizedFilters.includes(key)) {
+            customizedFilters = customizedFilters.filter((k) => k !== key);
+          } else {
+            customizedFilters.push(key);
+          }
+          qfDropdownOpen = true;
+          renderCustomizePanel();
+        };
+      });
+      panel.querySelectorAll(".cfg-chip-x").forEach((el) => {
+        el.onclick = (e) => {
+          e.stopPropagation();
+          customizedFilters = customizedFilters.filter((k) => k !== el.dataset.key);
+          renderCustomizePanel();
+        };
+      });
+    }
+    function renderForm() {
       const opts = richFilters.map(
         (f) => `<option value="${esc(f.id)}" ${f.id === selectedRfId ? "selected" : ""}>${esc(f.name)}</option>`
       ).join("");
+      const starHtml = selectedRfId ? `<span class="cfg-rf-star">\u2B50</span>` : "";
       document.getElementById("app").innerHTML = `
       <div class="cfg-wrap">
+
         <div class="cfg-field">
           <label class="cfg-label">Rich filter <span class="cfg-req">*</span></label>
           <div class="cfg-select-wrap">
-            <select class="cfg-select" id="cfgRfSel">
+            ${starHtml ? `<span class="cfg-select-star">${starHtml}</span>` : ""}
+            <select class="cfg-select ${selectedRfId ? "cfg-select--valued" : ""}" id="cfgRfSel">
               <option value="">Select...</option>
               ${opts}
             </select>
           </div>
           <div class="cfg-hint">
-            <span>The rich filter to be used as the basis for the gadget</span>
-            <a href="#" id="cfgOpenList" class="cfg-link">Open rich filters list</a>
+            <span class="cfg-hint-text">The rich filter to be used as the basis for the gadget</span>
+            <a href="#" id="cfgOpenList" class="cfg-link">Open rich filter config</a>
           </div>
-          ${errorMsg ? `<div class="cfg-error">${esc(errorMsg)}</div>` : ""}
+          ${formError ? `<div class="cfg-error">${esc(formError)}</div>` : ""}
         </div>
 
         <div class="cfg-info-box">
@@ -7232,7 +7341,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
           <span class="cfg-section-label">Quick filters</span>
           <div class="cfg-radio-group">
             <label class="cfg-radio-item">
-              <input type="radio" name="cfgQfMode" value="all" ${quickMode !== "jql" && quickMode !== "customize" ? "checked" : ""}>
+              <input type="radio" name="cfgQfMode" value="all" ${quickMode === "all" ? "checked" : ""}>
               <span>Show all filters</span>
             </label>
             <label class="cfg-radio-item">
@@ -7246,8 +7355,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
           </div>
         </div>
 
+        <div id="cfgCustomizePanel"></div>
+
+        <hr class="cfg-divider">
+
         <label class="cfg-checkbox-item">
-          <input type="checkbox" id="cfgEnableJql" ${enableJql !== false ? "checked" : ""}>
+          <input type="checkbox" id="cfgEnableJql" ${enableJql ? "checked" : ""}>
           <span>Enable JQL filtering</span>
         </label>
 
@@ -7256,7 +7369,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
             <button class="cfg-submit" id="cfgSubmit">Submit</button>
             <button class="cfg-cancel" id="cfgCancel">Cancel</button>
           </div>
-          <div class="cfg-grid-icon" title="Tile layout">
+          <div class="cfg-grid-icon">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="1" y="1" width="7" height="7" rx="1" fill="#5E6C84"/>
               <rect x="10" y="1" width="7" height="7" rx="1" fill="#5E6C84"/>
@@ -7266,17 +7379,44 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
           </div>
         </div>
       </div>`;
+      renderCustomizePanel();
+      document.getElementById("cfgRfSel").onchange = async (e) => {
+        selectedRfId = e.target.value;
+        customizedFilters = [];
+        qfDropdownOpen = false;
+        rfData = selectedRfId ? await (0, import_bridge.invoke)("getRichFilter", { id: selectedRfId }).catch(() => null) : null;
+        const starSpan = document.querySelector(".cfg-select-star");
+        if (starSpan) starSpan.style.display = selectedRfId ? "" : "none";
+        renderCustomizePanel();
+      };
+      document.querySelectorAll('input[name="cfgQfMode"]').forEach((r) => {
+        r.onchange = () => {
+          quickMode = r.value;
+          qfDropdownOpen = false;
+          renderCustomizePanel();
+        };
+      });
+      document.getElementById("cfgEnableJql").onchange = (e) => {
+        enableJql = e.target.checked;
+      };
       document.getElementById("cfgSubmit").onclick = async () => {
-        var _a2;
-        const rfId = document.getElementById("cfgRfSel").value;
-        const qm = ((_a2 = document.querySelector('input[name="cfgQfMode"]:checked')) == null ? void 0 : _a2.value) || "all";
-        const ejql = document.getElementById("cfgEnableJql").checked;
-        if (!rfId) {
-          renderForm(rfId, qm, ejql, "Please select a rich filter.");
+        formError = "";
+        if (!selectedRfId) {
+          formError = "Please select a rich filter.";
+          renderForm();
+          return;
+        }
+        if (quickMode === "customize" && customizedFilters.length === 0) {
+          renderCustomizePanel();
           return;
         }
         try {
-          await import_bridge.view.submit({ richFilterId: rfId, quickFiltersMode: qm, enableJql: ejql });
+          await import_bridge.view.submit({
+            richFilterId: selectedRfId,
+            quickFiltersMode: quickMode,
+            enableJql,
+            customizedFilters: quickMode === "customize" ? customizedFilters : []
+          });
         } catch (e) {
           console.error("view.submit failed:", e);
         }
@@ -7292,19 +7432,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
         try {
           const info = await (0, import_bridge.invoke)("getSiteInfo");
           const appId = "0b40a7d9-0481-40b2-9055-a954178f4efe";
-          if (info == null ? void 0 : info.baseUrl) {
-            window.open(`${info.baseUrl}/jira/apps/${appId}/rich-filters-app`, "_blank", "noopener");
-          }
+          if (info == null ? void 0 : info.baseUrl) window.open(`${info.baseUrl}/jira/apps/${appId}/rich-filters-app`, "_blank", "noopener");
         } catch (_) {
         }
       };
+      document.addEventListener("click", (e) => {
+        if (qfDropdownOpen && !e.target.closest("#cfgQfDropdown") && !e.target.closest("#cfgQfTrigger")) {
+          qfDropdownOpen = false;
+          const dd = document.getElementById("cfgQfDropdown");
+          if (dd) dd.classList.remove("open");
+        }
+      });
     }
-    renderForm(
-      savedConfig.richFilterId || "",
-      savedConfig.quickFiltersMode || "all",
-      savedConfig.enableJql !== false,
-      ""
-    );
+    renderForm();
   }
   function mount() {
     if (!document.getElementById("ctrl-styles")) {

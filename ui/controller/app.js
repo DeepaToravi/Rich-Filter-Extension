@@ -425,6 +425,9 @@ function renderQF() {
   const qfRow = document.getElementById('qfRow');
   if (!qfRow) return;
 
+  const isCustomize  = gadgetConfig.quickFiltersMode === 'customize';
+  const customKeys   = gadgetConfig.customizedFilters || [];
+
   // Use rich filter's staticFilters if a filter is selected, otherwise defaults
   const baseFilters = (state.rfConfig && state.rfConfig.staticFilters && state.rfConfig.staticFilters.length)
     ? state.rfConfig.staticFilters
@@ -435,11 +438,21 @@ function renderQF() {
     ? state.rfConfig.smartFilters
     : state.smartFilters;
 
-  const defaultBtns = baseFilters.map((f, i) =>
+  // Filter based on customize selection
+  const visibleBase = isCustomize
+    ? baseFilters.filter((f, i) =>
+        customKeys.includes('__static_all__') || customKeys.includes(`static_${i}`))
+    : baseFilters;
+
+  const visibleSmart = isCustomize
+    ? smartList.filter((f, i) => customKeys.includes(`smart_${i}`))
+    : smartList;
+
+  const defaultBtns = visibleBase.map((f, i) =>
     `<button class="qf-btn ${i === 0 ? 'active' : ''}" onclick="APP.applyQF(${JSON.stringify(f.jql)},this)">${esc(f.name)}</button>`
   ).join('');
 
-  const smartBtns = smartList.map((f, i) =>
+  const smartBtns = visibleSmart.map((f, i) =>
     `<span style="display:inline-flex;align-items:center;gap:1px">
       <button class="qf-btn" onclick="APP.applyQF(${JSON.stringify(f.jql)},this.parentElement.querySelector('.qf-btn'))" style="border-radius:10px 0 0 10px">${esc(f.name)}</button>
       <button class="btn-icon" title="Delete" onclick="APP.deleteSmartFilter(${i})" style="border-radius:0 10px 10px 0;padding:3px 5px;border-left:none;color:#FF7452">✕</button>
@@ -597,16 +610,23 @@ async function applyRichFilter(id) {
 }
 
 function updateDropdownVisibility(cfg) {
-  // If no config (no rich filter selected), show all dropdowns
   const fieldToId = {
     project: 'ddProject', status: 'ddStatus', assignee: 'ddAssignee',
     priority: 'ddPriority', issuetype: 'ddType', component: 'ddComponent', sprint: 'ddSprint',
   };
+  const isCustomize = gadgetConfig.quickFiltersMode === 'customize';
+  const customKeys  = gadgetConfig.customizedFilters || [];
+
   Object.entries(fieldToId).forEach(([field, ddId]) => {
     const wrap = document.getElementById(ddId);
     if (!wrap) return;
-    // If no config or field is explicitly true (or not set), show; if false, hide
-    wrap.style.display = (Object.keys(cfg).length === 0 || cfg[field] !== false) ? '' : 'none';
+    // rf dynamicFilters config
+    const rfAllows = Object.keys(cfg).length === 0 || cfg[field] !== false;
+    // gadget customize config
+    const gadgetAllows = !isCustomize ||
+      customKeys.includes('__dynamic_all__') ||
+      customKeys.includes(`dynamic_${field}`);
+    wrap.style.display = (rfAllows && gadgetAllows) ? '' : 'none';
   });
 }
 
@@ -615,34 +635,198 @@ async function mountConfigForm(ctx) {
   const savedConfig = ctx?.extension?.gadgetConfiguration || {};
   const richFilters = await invoke('listRichFilters').catch(() => []);
 
-  // Inject CONFIG_CSS — only way styles work in Forge's sandboxed iframe
-  if (!document.getElementById('cfg-styles')) {
-    const s = document.createElement('style');
-    s.id = 'cfg-styles';
-    s.textContent = CONFIG_CSS;
-    document.head.appendChild(s);
+  // ── mutable form state ────────────────────────────────────────────────────
+  let selectedRfId       = savedConfig.richFilterId      || '';
+  let quickMode          = savedConfig.quickFiltersMode  || 'all';
+  let enableJql          = savedConfig.enableJql !== false;
+  let customizedFilters  = Array.isArray(savedConfig.customizedFilters) ? [...savedConfig.customizedFilters] : [];
+  let rfData             = null;
+  let qfDropdownOpen     = false;
+  let formError          = '';
+
+  // Pre-load rf data if one is saved
+  if (selectedRfId) {
+    rfData = await invoke('getRichFilter', { id: selectedRfId }).catch(() => null);
   }
 
-  function renderForm(selectedRfId, quickMode, enableJql, errorMsg) {
+  // ── helpers ───────────────────────────────────────────────────────────────
+  const DYN_FIELDS = {
+    project:'Project', status:'Status', assignee:'Assignee',
+    priority:'Priority', issuetype:'Type', component:'Component', sprint:'Sprint',
+  };
+
+  // ALL possible dynamic fields — always show every one
+  const ALL_DYN_FIELDS = [
+    { key: 'project',   label: 'Project' },
+    { key: 'status',    label: 'Status' },
+    { key: 'assignee',  label: 'Assignee' },
+    { key: 'priority',  label: 'Priority' },
+    { key: 'issuetype', label: 'Type' },
+    { key: 'component', label: 'Component' },
+    { key: 'sprint',    label: 'Sprint' },
+  ];
+
+  function buildFilterOptions(rf) {
+    const opts = [];
+    // ── STATIC FILTERS — always show, even if none defined ──────────────────
+    opts.push({ group: 'STATIC FILTERS', key: '__static_all__', label: 'All static', icon: '' });
+    if (rf && rf.staticFilters && rf.staticFilters.length) {
+      rf.staticFilters.forEach((f, i) =>
+        opts.push({ group: 'STATIC FILTERS', key: `static_${i}`, label: f.name || `Filter ${i+1}`, icon: '' })
+      );
+    }
+    // ── DYNAMIC FILTERS — always show all standard fields ───────────────────
+    opts.push({ group: 'DYNAMIC FILTERS', key: '__dynamic_all__', label: 'All dynamic', icon: '' });
+    ALL_DYN_FIELDS.forEach(f =>
+      opts.push({ group: 'DYNAMIC FILTERS', key: `dynamic_${f.key}`, label: f.label, icon: '&#8801;' })
+    );
+    // ── SMART FILTERS — from rf if available ────────────────────────────────
+    if (rf && rf.smartFilters && rf.smartFilters.length) {
+      rf.smartFilters.forEach((f, i) =>
+        opts.push({ group: 'SMART FILTERS', key: `smart_${i}`, label: f.name || `Smart ${i+1}`, icon: '' })
+      );
+    } else {
+      // placeholder so the tab always exists
+      opts.push({ group: 'SMART FILTERS', key: '__smart_placeholder__', label: '(No smart filters configured)', icon: '', disabled: true });
+    }
+    return opts;
+  }
+
+  // ── render customize panel (injected into #cfgCustomizePanel) ────────────
+  let activeTab = 'STATIC FILTERS'; // tab state
+
+  function renderCustomizePanel() {
+    const panel = document.getElementById('cfgCustomizePanel');
+    if (!panel) return;
+    if (quickMode !== 'customize') { panel.innerHTML = ''; return; }
+
+    const filterOpts  = buildFilterOptions(rfData);
+    const hasSelected = customizedFilters.filter(k => k !== '__smart_placeholder__').length > 0;
+
+    // warning
+    const warnHtml = !hasSelected
+      ? `<div class="cfg-warn"><span class="cfg-warn-icon">&#9651;</span> Select one or more quick filters to display</div>`
+      : '';
+
+    // chips of selected items
+    const chipsHtml = customizedFilters
+      .filter(k => k !== '__smart_placeholder__')
+      .map(key => {
+        const opt = filterOpts.find(o => o.key === key);
+        return opt ? `<span class="cfg-chip">${esc(opt.label)}<span class="cfg-chip-x" data-key="${esc(key)}">&#215;</span></span>` : '';
+      }).join('');
+
+    // tabs
+    const TABS = ['STATIC FILTERS', 'DYNAMIC FILTERS', 'SMART FILTERS', 'SEPARATORS'];
+    const tabsHtml = TABS.map(t => {
+      const active = t === activeTab ? 'cfg-qf-tab--active' : '';
+      return `<button class="cfg-qf-tab ${active}" data-tab="${esc(t)}">${esc(t)}</button>`;
+    }).join('');
+
+    // filter opts by active tab (SEPARATORS shows nothing for now)
+    const tabOpts = filterOpts.filter(o => o.group === activeTab);
+
+    // grouped content for active tab
+    const contentHtml = tabOpts.length
+      ? tabOpts.map(o => {
+          if (o.disabled) return `<div class="cfg-qf-empty">${esc(o.label)}</div>`;
+          const chk = customizedFilters.includes(o.key);
+          const isAllRow = o.key.startsWith('__');
+          return `<label class="cfg-qf-opt ${chk ? 'selected' : ''} ${isAllRow ? 'cfg-qf-opt--all' : ''}" data-key="${esc(o.key)}">
+            <input type="checkbox" ${chk ? 'checked' : ''}>
+            ${o.icon ? `<span class="cfg-qf-icon">${o.icon}</span>` : ''}
+            <span>${esc(o.label)}</span>
+          </label>`;
+        }).join('')
+      : `<div class="cfg-qf-empty">No ${esc(activeTab.toLowerCase())} available.</div>`;
+
+    panel.innerHTML = `
+      ${warnHtml}
+      <div class="cfg-qf-picker">
+        <div class="cfg-qf-trigger" id="cfgQfTrigger">
+          <span class="cfg-qf-trigger-inner">${chipsHtml || '<span class="cfg-qf-placeholder">Select quick filters...</span>'}</span>
+          <span class="cfg-qf-arrow">&#9660;</span>
+        </div>
+        <div class="cfg-qf-dropdown ${qfDropdownOpen ? 'open' : ''}" id="cfgQfDropdown">
+          <div class="cfg-qf-tabs" id="cfgQfTabs">${tabsHtml}</div>
+          <div class="cfg-qf-list" id="cfgQfList">${contentHtml}</div>
+        </div>
+      </div>
+      <div class="cfg-qf-hint">Select <em>Section</em> to add collapsible sections that group quick filters. A section will group all quick filters that follow it in the list.</div>
+    `;
+
+    // trigger open/close
+    document.getElementById('cfgQfTrigger').onclick = (e) => {
+      e.stopPropagation();
+      qfDropdownOpen = !qfDropdownOpen;
+      const dd = document.getElementById('cfgQfDropdown');
+      if (dd) dd.classList.toggle('open', qfDropdownOpen);
+    };
+
+    // tab switching
+    panel.querySelectorAll('.cfg-qf-tab').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        activeTab = btn.dataset.tab;
+        qfDropdownOpen = true;
+        renderCustomizePanel();
+      };
+    });
+
+    // checkbox toggle
+    panel.querySelectorAll('.cfg-qf-opt').forEach(el => {
+      el.querySelector('input').onchange = (e) => {
+        e.stopPropagation();
+        const key = el.dataset.key;
+        if (key === '__smart_placeholder__') return;
+        if (customizedFilters.includes(key)) {
+          customizedFilters = customizedFilters.filter(k => k !== key);
+        } else {
+          customizedFilters.push(key);
+        }
+        qfDropdownOpen = true;
+        renderCustomizePanel();
+      };
+    });
+
+    // chip remove
+    panel.querySelectorAll('.cfg-chip-x').forEach(el => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        customizedFilters = customizedFilters.filter(k => k !== el.dataset.key);
+        renderCustomizePanel();
+      };
+    });
+  }
+
+  // ── render main form shell ────────────────────────────────────────────────
+  function renderForm() {
     const opts = richFilters.map(f =>
       `<option value="${esc(f.id)}" ${f.id === selectedRfId ? 'selected' : ''}>${esc(f.name)}</option>`
     ).join('');
 
+    // star icon for selected filter
+    const starHtml = selectedRfId
+      ? `<span class="cfg-rf-star">⭐</span>`
+      : '';
+
     document.getElementById('app').innerHTML = `
       <div class="cfg-wrap">
+
         <div class="cfg-field">
           <label class="cfg-label">Rich filter <span class="cfg-req">*</span></label>
           <div class="cfg-select-wrap">
-            <select class="cfg-select" id="cfgRfSel">
+            ${starHtml ? `<span class="cfg-select-star">${starHtml}</span>` : ''}
+            <select class="cfg-select ${selectedRfId ? 'cfg-select--valued' : ''}" id="cfgRfSel">
               <option value="">Select...</option>
               ${opts}
             </select>
           </div>
           <div class="cfg-hint">
-            <span>The rich filter to be used as the basis for the gadget</span>
-            <a href="#" id="cfgOpenList" class="cfg-link">Open rich filters list</a>
+            <span class="cfg-hint-text">The rich filter to be used as the basis for the gadget</span>
+            <a href="#" id="cfgOpenList" class="cfg-link">Open rich filter config</a>
           </div>
-          ${errorMsg ? `<div class="cfg-error">${esc(errorMsg)}</div>` : ''}
+          ${formError ? `<div class="cfg-error">${esc(formError)}</div>` : ''}
         </div>
 
         <div class="cfg-info-box">
@@ -654,7 +838,7 @@ async function mountConfigForm(ctx) {
           <span class="cfg-section-label">Quick filters</span>
           <div class="cfg-radio-group">
             <label class="cfg-radio-item">
-              <input type="radio" name="cfgQfMode" value="all" ${quickMode !== 'jql' && quickMode !== 'customize' ? 'checked' : ''}>
+              <input type="radio" name="cfgQfMode" value="all" ${quickMode === 'all' ? 'checked' : ''}>
               <span>Show all filters</span>
             </label>
             <label class="cfg-radio-item">
@@ -668,8 +852,12 @@ async function mountConfigForm(ctx) {
           </div>
         </div>
 
+        <div id="cfgCustomizePanel"></div>
+
+        <hr class="cfg-divider">
+
         <label class="cfg-checkbox-item">
-          <input type="checkbox" id="cfgEnableJql" ${enableJql !== false ? 'checked' : ''}>
+          <input type="checkbox" id="cfgEnableJql" ${enableJql ? 'checked' : ''}>
           <span>Enable JQL filtering</span>
         </label>
 
@@ -678,7 +866,7 @@ async function mountConfigForm(ctx) {
             <button class="cfg-submit" id="cfgSubmit">Submit</button>
             <button class="cfg-cancel" id="cfgCancel">Cancel</button>
           </div>
-          <div class="cfg-grid-icon" title="Tile layout">
+          <div class="cfg-grid-icon">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="1" y="1" width="7" height="7" rx="1" fill="#5E6C84"/>
               <rect x="10" y="1" width="7" height="7" rx="1" fill="#5E6C84"/>
@@ -689,43 +877,72 @@ async function mountConfigForm(ctx) {
         </div>
       </div>`;
 
+    // initial customize panel
+    renderCustomizePanel();
+
+    // ── wire events ──
+    document.getElementById('cfgRfSel').onchange = async (e) => {
+      selectedRfId = e.target.value;
+      customizedFilters = [];
+      qfDropdownOpen = false;
+      rfData = selectedRfId
+        ? await invoke('getRichFilter', { id: selectedRfId }).catch(() => null)
+        : null;
+      // re-render star
+      const starSpan = document.querySelector('.cfg-select-star');
+      if (starSpan) starSpan.style.display = selectedRfId ? '' : 'none';
+      renderCustomizePanel();
+    };
+
+    document.querySelectorAll('input[name="cfgQfMode"]').forEach(r => {
+      r.onchange = () => {
+        quickMode = r.value;
+        qfDropdownOpen = false;
+        renderCustomizePanel();
+      };
+    });
+
+    document.getElementById('cfgEnableJql').onchange = (e) => { enableJql = e.target.checked; };
+
     document.getElementById('cfgSubmit').onclick = async () => {
-      const rfId = document.getElementById('cfgRfSel').value;
-      const qm   = document.querySelector('input[name="cfgQfMode"]:checked')?.value || 'all';
-      const ejql = document.getElementById('cfgEnableJql').checked;
-      if (!rfId) {
-        renderForm(rfId, qm, ejql, 'Please select a rich filter.');
+      formError = '';
+      if (!selectedRfId) { formError = 'Please select a rich filter.'; renderForm(); return; }
+      if (quickMode === 'customize' && customizedFilters.length === 0) {
+        renderCustomizePanel(); // re-render to show warning
         return;
       }
       try {
-        await view.submit({ richFilterId: rfId, quickFiltersMode: qm, enableJql: ejql });
-      } catch (e) {
-        console.error('view.submit failed:', e);
-      }
+        await view.submit({
+          richFilterId: selectedRfId,
+          quickFiltersMode: quickMode,
+          enableJql,
+          customizedFilters: quickMode === 'customize' ? customizedFilters : [],
+        });
+      } catch (e) { console.error('view.submit failed:', e); }
     };
 
-    document.getElementById('cfgCancel').onclick = () => {
-      try { view.close(); } catch (_) {}
-    };
+    document.getElementById('cfgCancel').onclick = () => { try { view.close(); } catch (_) {} };
 
     document.getElementById('cfgOpenList').onclick = async (e) => {
       e.preventDefault();
       try {
         const info  = await invoke('getSiteInfo');
         const appId = '0b40a7d9-0481-40b2-9055-a954178f4efe';
-        if (info?.baseUrl) {
-          window.open(`${info.baseUrl}/jira/apps/${appId}/rich-filters-app`, '_blank', 'noopener');
-        }
+        if (info?.baseUrl) window.open(`${info.baseUrl}/jira/apps/${appId}/rich-filters-app`, '_blank', 'noopener');
       } catch (_) {}
     };
+
+    // close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (qfDropdownOpen && !e.target.closest('#cfgQfDropdown') && !e.target.closest('#cfgQfTrigger')) {
+        qfDropdownOpen = false;
+        const dd = document.getElementById('cfgQfDropdown');
+        if (dd) dd.classList.remove('open');
+      }
+    });
   }
 
-  renderForm(
-    savedConfig.richFilterId   || '',
-    savedConfig.quickFiltersMode || 'all',
-    savedConfig.enableJql !== false,
-    ''
-  );
+  renderForm();
 }
 
 // ── MOUNT ──────────────────────────────────────────────────────────────────
