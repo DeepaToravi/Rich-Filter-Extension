@@ -1,4 +1,4 @@
-import { invoke } from '@forge/bridge';
+import { invoke, view } from '@forge/bridge';
 
 let FILTER_ID = 'default-filter';
 
@@ -108,6 +108,37 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
 .modal-footer{display:flex;gap:8px;justify-content:flex-end}
 .modal-footer .btn-cancel{padding:5px 12px;background:#fff;border:1px solid #DFE1E6;border-radius:3px;cursor:pointer;font-size:12px;color:#42526E}
 .modal-footer .btn-save{padding:5px 12px;background:#0052CC;border:none;border-radius:3px;cursor:pointer;font-size:12px;color:#fff;font-weight:600}
+`;
+
+// ── GADGET CONFIG STATE ─────────────────────────────────────────────────────
+let gadgetConfig = {};
+
+// ── CONFIG FORM CSS ──────────────────────────────────────────────────────────
+const CONFIG_CSS = `
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;color:#172b4d;background:#fff}
+.cfg-wrap{padding:16px 20px 20px;background:#fff;max-width:420px}.cfg-field{margin-bottom:16px}
+.cfg-label{font-size:12px;font-weight:600;color:#172b4d;margin-bottom:6px;display:block;line-height:1.4}
+.cfg-req{color:#DE350B;margin-left:2px}
+.cfg-select-wrap{position:relative}
+.cfg-select{width:100%;padding:8px 32px 8px 10px;border:2px solid #DFE1E6;border-radius:3px;font-size:14px;color:#172b4d;background:#fff;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23172b4d' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.cfg-select:focus{border-color:#4C9AFF;box-shadow:0 0 0 2px rgba(76,154,255,.2)}
+.cfg-hint{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-top:5px;line-height:1.4}.cfg-hint span{font-size:11px;color:#42526E;flex:1}
+.cfg-link{font-size:11px;color:#0052CC;text-decoration:none;white-space:nowrap;flex-shrink:0}.cfg-link:hover{text-decoration:underline}
+.cfg-error{font-size:11px;color:#DE350B;margin-top:4px}
+.cfg-info-box{display:flex;gap:10px;align-items:flex-start;background:#DEEBFF;border-radius:3px;padding:12px;margin-bottom:16px}
+.cfg-info-icon{width:20px;height:20px;background:#0052CC;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px}
+.cfg-info-text{font-size:13px;color:#0052CC;line-height:1.5}
+.cfg-section-label{font-size:12px;font-weight:600;color:#172b4d;display:block;margin-bottom:10px}
+.cfg-radio-group{display:flex;flex-direction:column;gap:10px}
+.cfg-radio-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#172b4d}
+.cfg-radio-item input[type=radio]{width:16px;height:16px;cursor:pointer;accent-color:#0052CC;flex-shrink:0}
+.cfg-checkbox-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#172b4d;margin-bottom:20px}
+.cfg-checkbox-item input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#0052CC;flex-shrink:0}
+.cfg-footer{display:flex;align-items:center;justify-content:space-between}
+.cfg-footer-left{display:flex;align-items:center;gap:10px}
+.cfg-submit{padding:8px 16px;background:#0052CC;color:#fff;border:none;border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.2}.cfg-submit:hover{background:#0065FF}
+.cfg-cancel{background:none;border:none;color:#172b4d;font-size:14px;cursor:pointer;padding:8px 4px;line-height:1.2}.cfg-cancel:hover{color:#0052CC}
+.cfg-grid-icon{color:#5E6C84;opacity:.7;display:flex;align-items:center}
 `;
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
@@ -248,7 +279,7 @@ function renderComponent(c) {
   const name = c.name || c;
   const chk  = (state.filters.component || []).includes(name) ? 'checked' : '';
   return `<div class="dd-item" onclick="APP.toggleArr('component','${esc(name)}','ddComponent','Component')">
-    <input type="checkbox" ${chk} onclick="event.stopPropagation()"><span>${esc(name)}</span></div>`;
+    <input type="checkbox" ${chk} oncli.ck="event.stopPropagation()"><span>${esc(name)}</span></div>`;
 }
 
 function renderSprint(s) {
@@ -498,7 +529,7 @@ function showModal({ title, fields, onSave }) {
 
 // ── RICH FILTER LOADER ─────────────────────────────────────────────────────
 
-async function loadRichFilters() {
+async function loadRichFilters(preferredId) {
   const rfs = await invoke('listRichFilters').catch(() => []);
   state.richFilters = rfs || [];
   const sel = document.getElementById('rfPickSel');
@@ -510,8 +541,11 @@ async function loadRichFilters() {
     applyRichFilter(sel.value);
   });
 
-  // Restore previously active rich filter
-  const activeId = await invoke('getActiveRichFilter').catch(() => null);
+  // Prefer gadget-configured rich filter over the global "last active" one
+  let activeId = preferredId || null;
+  if (!activeId) {
+    activeId = await invoke('getActiveRichFilter').catch(() => null);
+  }
   if (activeId && (rfs || []).find(f => f.id === activeId)) {
     sel.value = activeId;
     await applyRichFilter(activeId);
@@ -576,11 +610,133 @@ function updateDropdownVisibility(cfg) {
   });
 }
 
+// ── CONFIG FORM (gadget edit / configuration mode) ─────────────────────────
+async function mountConfigForm(ctx) {
+  const savedConfig = ctx?.extension?.gadgetConfiguration || {};
+  const richFilters = await invoke('listRichFilters').catch(() => []);
+
+  // Inject CONFIG_CSS — only way styles work in Forge's sandboxed iframe
+  if (!document.getElementById('cfg-styles')) {
+    const s = document.createElement('style');
+    s.id = 'cfg-styles';
+    s.textContent = CONFIG_CSS;
+    document.head.appendChild(s);
+  }
+
+  function renderForm(selectedRfId, quickMode, enableJql, errorMsg) {
+    const opts = richFilters.map(f =>
+      `<option value="${esc(f.id)}" ${f.id === selectedRfId ? 'selected' : ''}>${esc(f.name)}</option>`
+    ).join('');
+
+    document.getElementById('app').innerHTML = `
+      <div class="cfg-wrap">
+        <div class="cfg-field">
+          <label class="cfg-label">Rich filter <span class="cfg-req">*</span></label>
+          <div class="cfg-select-wrap">
+            <select class="cfg-select" id="cfgRfSel">
+              <option value="">Select...</option>
+              ${opts}
+            </select>
+          </div>
+          <div class="cfg-hint">
+            <span>The rich filter to be used as the basis for the gadget</span>
+            <a href="#" id="cfgOpenList" class="cfg-link">Open rich filters list</a>
+          </div>
+          ${errorMsg ? `<div class="cfg-error">${esc(errorMsg)}</div>` : ''}
+        </div>
+
+        <div class="cfg-info-box">
+          <div class="cfg-info-icon">i</div>
+          <div class="cfg-info-text">Use this gadget to display quick filters that apply to other rich filter gadgets on this dashboard. Only gadgets based on the same rich filter are linked together.</div>
+        </div>
+
+        <div class="cfg-field">
+          <span class="cfg-section-label">Quick filters</span>
+          <div class="cfg-radio-group">
+            <label class="cfg-radio-item">
+              <input type="radio" name="cfgQfMode" value="all" ${quickMode !== 'jql' && quickMode !== 'customize' ? 'checked' : ''}>
+              <span>Show all filters</span>
+            </label>
+            <label class="cfg-radio-item">
+              <input type="radio" name="cfgQfMode" value="jql" ${quickMode === 'jql' ? 'checked' : ''}>
+              <span>Show JQL filtering only</span>
+            </label>
+            <label class="cfg-radio-item">
+              <input type="radio" name="cfgQfMode" value="customize" ${quickMode === 'customize' ? 'checked' : ''}>
+              <span>Customize shown filters</span>
+            </label>
+          </div>
+        </div>
+
+        <label class="cfg-checkbox-item">
+          <input type="checkbox" id="cfgEnableJql" ${enableJql !== false ? 'checked' : ''}>
+          <span>Enable JQL filtering</span>
+        </label>
+
+        <div class="cfg-footer">
+          <div class="cfg-footer-left">
+            <button class="cfg-submit" id="cfgSubmit">Submit</button>
+            <button class="cfg-cancel" id="cfgCancel">Cancel</button>
+          </div>
+          <div class="cfg-grid-icon" title="Tile layout">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="7" height="7" rx="1" fill="#5E6C84"/>
+              <rect x="10" y="1" width="7" height="7" rx="1" fill="#5E6C84"/>
+              <rect x="1" y="10" width="7" height="7" rx="1" fill="#5E6C84"/>
+              <rect x="10" y="10" width="7" height="7" rx="1" fill="#5E6C84"/>
+            </svg>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('cfgSubmit').onclick = async () => {
+      const rfId = document.getElementById('cfgRfSel').value;
+      const qm   = document.querySelector('input[name="cfgQfMode"]:checked')?.value || 'all';
+      const ejql = document.getElementById('cfgEnableJql').checked;
+      if (!rfId) {
+        renderForm(rfId, qm, ejql, 'Please select a rich filter.');
+        return;
+      }
+      try {
+        await view.submit({ richFilterId: rfId, quickFiltersMode: qm, enableJql: ejql });
+      } catch (e) {
+        console.error('view.submit failed:', e);
+      }
+    };
+
+    document.getElementById('cfgCancel').onclick = () => {
+      try { view.close(); } catch (_) {}
+    };
+
+    document.getElementById('cfgOpenList').onclick = async (e) => {
+      e.preventDefault();
+      try {
+        const info  = await invoke('getSiteInfo');
+        const appId = '0b40a7d9-0481-40b2-9055-a954178f4efe';
+        if (info?.baseUrl) {
+          window.open(`${info.baseUrl}/jira/apps/${appId}/rich-filters-app`, '_blank', 'noopener');
+        }
+      } catch (_) {}
+    };
+  }
+
+  renderForm(
+    savedConfig.richFilterId   || '',
+    savedConfig.quickFiltersMode || 'all',
+    savedConfig.enableJql !== false,
+    ''
+  );
+}
+
 // ── MOUNT ──────────────────────────────────────────────────────────────────
 function mount() {
-  const style = document.createElement('style');
-  style.textContent = CSS;
-  document.head.appendChild(style);
+  // Inject CSS — only way styles work in Forge's sandboxed iframe
+  if (!document.getElementById('ctrl-styles')) {
+    const s = document.createElement('style');
+    s.id = 'ctrl-styles';
+    s.textContent = CSS;
+    document.head.appendChild(s);
+  }
 
   document.getElementById('app').innerHTML = `
     <div class="ctrl">
@@ -617,7 +773,7 @@ function mount() {
       <div class="chips" id="chips"></div>
 
       <!-- Row 4: Quick Filters -->
-      <div class="section">
+      <div class="section" id="qfSection">
         <div class="section-hdr">
           <span class="section-title">⚡ Quick Filters</span>
           <button class="btn-icon" onclick="APP.addSmartFilter()" title="Add custom quick filter">＋ Add</button>
@@ -635,6 +791,16 @@ function mount() {
 
     </div>`;
 
+  // Apply gadget configuration visibility settings
+  if (gadgetConfig.enableJql === false) {
+    const jqlIn = document.getElementById('jqlIn');
+    if (jqlIn) jqlIn.style.display = 'none';
+  }
+  if (gadgetConfig.quickFiltersMode === 'jql') {
+    const qfSec = document.getElementById('qfSection');
+    if (qfSec) qfSec.style.display = 'none';
+  }
+
   document.getElementById('btnApply').onclick = applyFilters;
   document.getElementById('btnClear').onclick  = clearFilters;
   document.getElementById('jqlIn').onkeydown   = e => { if (e.key === 'Enter') applyFilters(); };
@@ -645,10 +811,26 @@ function mount() {
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 async function init() {
+  // Detect gadget mode: entryPoint can sit at ctx.extension.entryPoint OR ctx.entryPoint
+  const ctx = await view.getContext().catch(() => null);
+  const entryPoint  = ctx?.extension?.entryPoint || ctx?.entryPoint || 'view';
+  const savedConfig = ctx?.extension?.gadgetConfiguration || ctx?.gadgetConfiguration || {};
+
+  // Show config form when:
+  //   (1) user clicked the gadget "Configure / Edit" icon  →  entryPoint === 'edit'
+  //   (2) gadget was just added and has no rich filter saved yet
+  if (entryPoint === 'edit' || !savedConfig.richFilterId) {
+    await mountConfigForm(ctx);
+    return;
+  }
+
+  // ── VIEW MODE ─────────────────────────────────────────────────────────────
+  gadgetConfig = savedConfig;
+
   mount();
 
-  // Load and set up the rich filter selector
-  loadRichFilters();
+  // Load and set up the rich filter selector (prefer gadget-configured rich filter)
+  loadRichFilters(gadgetConfig.richFilterId || null);
 
   // Static dropdowns (no loading needed)
   makeDropdown('ddStatus',   'Status',   STATUSES,    renderStatus);

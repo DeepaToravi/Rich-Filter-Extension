@@ -6739,6 +6739,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
 .modal-footer .btn-cancel{padding:5px 12px;background:#fff;border:1px solid #DFE1E6;border-radius:3px;cursor:pointer;font-size:12px;color:#42526E}
 .modal-footer .btn-save{padding:5px 12px;background:#0052CC;border:none;border-radius:3px;cursor:pointer;font-size:12px;color:#fff;font-weight:600}
 `;
+  var gadgetConfig = {};
+  var CONFIG_CSS = `
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;color:#172b4d;background:#fff}
+.cfg-wrap{padding:16px 20px 20px;background:#fff;max-width:420px}.cfg-field{margin-bottom:16px}
+.cfg-label{font-size:12px;font-weight:600;color:#172b4d;margin-bottom:6px;display:block;line-height:1.4}
+.cfg-req{color:#DE350B;margin-left:2px}
+.cfg-select-wrap{position:relative}
+.cfg-select{width:100%;padding:8px 32px 8px 10px;border:2px solid #DFE1E6;border-radius:3px;font-size:14px;color:#172b4d;background:#fff;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23172b4d' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.cfg-select:focus{border-color:#4C9AFF;box-shadow:0 0 0 2px rgba(76,154,255,.2)}
+.cfg-hint{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-top:5px;line-height:1.4}.cfg-hint span{font-size:11px;color:#42526E;flex:1}
+.cfg-link{font-size:11px;color:#0052CC;text-decoration:none;white-space:nowrap;flex-shrink:0}.cfg-link:hover{text-decoration:underline}
+.cfg-error{font-size:11px;color:#DE350B;margin-top:4px}
+.cfg-info-box{display:flex;gap:10px;align-items:flex-start;background:#DEEBFF;border-radius:3px;padding:12px;margin-bottom:16px}
+.cfg-info-icon{width:20px;height:20px;background:#0052CC;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px}
+.cfg-info-text{font-size:13px;color:#0052CC;line-height:1.5}
+.cfg-section-label{font-size:12px;font-weight:600;color:#172b4d;display:block;margin-bottom:10px}
+.cfg-radio-group{display:flex;flex-direction:column;gap:10px}
+.cfg-radio-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#172b4d}
+.cfg-radio-item input[type=radio]{width:16px;height:16px;cursor:pointer;accent-color:#0052CC;flex-shrink:0}
+.cfg-checkbox-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#172b4d;margin-bottom:20px}
+.cfg-checkbox-item input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#0052CC;flex-shrink:0}
+.cfg-footer{display:flex;align-items:center;justify-content:space-between}
+.cfg-footer-left{display:flex;align-items:center;gap:10px}
+.cfg-submit{padding:8px 16px;background:#0052CC;color:#fff;border:none;border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.2}.cfg-submit:hover{background:#0065FF}
+.cfg-cancel{background:none;border:none;color:#172b4d;font-size:14px;cursor:pointer;padding:8px 4px;line-height:1.2}.cfg-cancel:hover{color:#0052CC}
+.cfg-grid-icon{color:#5E6C84;opacity:.7;display:flex;align-items:center}
+`;
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
@@ -6871,7 +6898,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
     const name = c.name || c;
     const chk = (state.filters.component || []).includes(name) ? "checked" : "";
     return `<div class="dd-item" onclick="APP.toggleArr('component','${esc(name)}','ddComponent','Component')">
-    <input type="checkbox" ${chk} onclick="event.stopPropagation()"><span>${esc(name)}</span></div>`;
+    <input type="checkbox" ${chk} oncli.ck="event.stopPropagation()"><span>${esc(name)}</span></div>`;
   }
   function renderSprint(s) {
     const name = s.name || s;
@@ -7085,7 +7112,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
       if (e.target === overlay) overlay.remove();
     };
   }
-  async function loadRichFilters() {
+  async function loadRichFilters(preferredId) {
     const rfs = await (0, import_bridge.invoke)("listRichFilters").catch(() => []);
     state.richFilters = rfs || [];
     const sel = document.getElementById("rfPickSel");
@@ -7094,7 +7121,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
     sel.addEventListener("change", () => {
       applyRichFilter(sel.value);
     });
-    const activeId = await (0, import_bridge.invoke)("getActiveRichFilter").catch(() => null);
+    let activeId = preferredId || null;
+    if (!activeId) {
+      activeId = await (0, import_bridge.invoke)("getActiveRichFilter").catch(() => null);
+    }
     if (activeId && (rfs || []).find((f) => f.id === activeId)) {
       sel.value = activeId;
       await applyRichFilter(activeId);
@@ -7162,10 +7192,127 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
       wrap.style.display = Object.keys(cfg).length === 0 || cfg[field] !== false ? "" : "none";
     });
   }
+  async function mountConfigForm(ctx) {
+    var _a;
+    const savedConfig = ((_a = ctx == null ? void 0 : ctx.extension) == null ? void 0 : _a.gadgetConfiguration) || {};
+    const richFilters = await (0, import_bridge.invoke)("listRichFilters").catch(() => []);
+    if (!document.getElementById("cfg-styles")) {
+      const s = document.createElement("style");
+      s.id = "cfg-styles";
+      s.textContent = CONFIG_CSS;
+      document.head.appendChild(s);
+    }
+    function renderForm(selectedRfId, quickMode, enableJql, errorMsg) {
+      const opts = richFilters.map(
+        (f) => `<option value="${esc(f.id)}" ${f.id === selectedRfId ? "selected" : ""}>${esc(f.name)}</option>`
+      ).join("");
+      document.getElementById("app").innerHTML = `
+      <div class="cfg-wrap">
+        <div class="cfg-field">
+          <label class="cfg-label">Rich filter <span class="cfg-req">*</span></label>
+          <div class="cfg-select-wrap">
+            <select class="cfg-select" id="cfgRfSel">
+              <option value="">Select...</option>
+              ${opts}
+            </select>
+          </div>
+          <div class="cfg-hint">
+            <span>The rich filter to be used as the basis for the gadget</span>
+            <a href="#" id="cfgOpenList" class="cfg-link">Open rich filters list</a>
+          </div>
+          ${errorMsg ? `<div class="cfg-error">${esc(errorMsg)}</div>` : ""}
+        </div>
+
+        <div class="cfg-info-box">
+          <div class="cfg-info-icon">i</div>
+          <div class="cfg-info-text">Use this gadget to display quick filters that apply to other rich filter gadgets on this dashboard. Only gadgets based on the same rich filter are linked together.</div>
+        </div>
+
+        <div class="cfg-field">
+          <span class="cfg-section-label">Quick filters</span>
+          <div class="cfg-radio-group">
+            <label class="cfg-radio-item">
+              <input type="radio" name="cfgQfMode" value="all" ${quickMode !== "jql" && quickMode !== "customize" ? "checked" : ""}>
+              <span>Show all filters</span>
+            </label>
+            <label class="cfg-radio-item">
+              <input type="radio" name="cfgQfMode" value="jql" ${quickMode === "jql" ? "checked" : ""}>
+              <span>Show JQL filtering only</span>
+            </label>
+            <label class="cfg-radio-item">
+              <input type="radio" name="cfgQfMode" value="customize" ${quickMode === "customize" ? "checked" : ""}>
+              <span>Customize shown filters</span>
+            </label>
+          </div>
+        </div>
+
+        <label class="cfg-checkbox-item">
+          <input type="checkbox" id="cfgEnableJql" ${enableJql !== false ? "checked" : ""}>
+          <span>Enable JQL filtering</span>
+        </label>
+
+        <div class="cfg-footer">
+          <div class="cfg-footer-left">
+            <button class="cfg-submit" id="cfgSubmit">Submit</button>
+            <button class="cfg-cancel" id="cfgCancel">Cancel</button>
+          </div>
+          <div class="cfg-grid-icon" title="Tile layout">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="7" height="7" rx="1" fill="#5E6C84"/>
+              <rect x="10" y="1" width="7" height="7" rx="1" fill="#5E6C84"/>
+              <rect x="1" y="10" width="7" height="7" rx="1" fill="#5E6C84"/>
+              <rect x="10" y="10" width="7" height="7" rx="1" fill="#5E6C84"/>
+            </svg>
+          </div>
+        </div>
+      </div>`;
+      document.getElementById("cfgSubmit").onclick = async () => {
+        var _a2;
+        const rfId = document.getElementById("cfgRfSel").value;
+        const qm = ((_a2 = document.querySelector('input[name="cfgQfMode"]:checked')) == null ? void 0 : _a2.value) || "all";
+        const ejql = document.getElementById("cfgEnableJql").checked;
+        if (!rfId) {
+          renderForm(rfId, qm, ejql, "Please select a rich filter.");
+          return;
+        }
+        try {
+          await import_bridge.view.submit({ richFilterId: rfId, quickFiltersMode: qm, enableJql: ejql });
+        } catch (e) {
+          console.error("view.submit failed:", e);
+        }
+      };
+      document.getElementById("cfgCancel").onclick = () => {
+        try {
+          import_bridge.view.close();
+        } catch (_) {
+        }
+      };
+      document.getElementById("cfgOpenList").onclick = async (e) => {
+        e.preventDefault();
+        try {
+          const info = await (0, import_bridge.invoke)("getSiteInfo");
+          const appId = "0b40a7d9-0481-40b2-9055-a954178f4efe";
+          if (info == null ? void 0 : info.baseUrl) {
+            window.open(`${info.baseUrl}/jira/apps/${appId}/rich-filters-app`, "_blank", "noopener");
+          }
+        } catch (_) {
+        }
+      };
+    }
+    renderForm(
+      savedConfig.richFilterId || "",
+      savedConfig.quickFiltersMode || "all",
+      savedConfig.enableJql !== false,
+      ""
+    );
+  }
   function mount() {
-    const style = document.createElement("style");
-    style.textContent = CSS;
-    document.head.appendChild(style);
+    if (!document.getElementById("ctrl-styles")) {
+      const s = document.createElement("style");
+      s.id = "ctrl-styles";
+      s.textContent = CSS;
+      document.head.appendChild(s);
+    }
     document.getElementById("app").innerHTML = `
     <div class="ctrl">
 
@@ -7201,7 +7348,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
       <div class="chips" id="chips"></div>
 
       <!-- Row 4: Quick Filters -->
-      <div class="section">
+      <div class="section" id="qfSection">
         <div class="section-hdr">
           <span class="section-title">\u26A1 Quick Filters</span>
           <button class="btn-icon" onclick="APP.addSmartFilter()" title="Add custom quick filter">\uFF0B Add</button>
@@ -7218,6 +7365,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
       </div>
 
     </div>`;
+    if (gadgetConfig.enableJql === false) {
+      const jqlIn = document.getElementById("jqlIn");
+      if (jqlIn) jqlIn.style.display = "none";
+    }
+    if (gadgetConfig.quickFiltersMode === "jql") {
+      const qfSec = document.getElementById("qfSection");
+      if (qfSec) qfSec.style.display = "none";
+    }
     document.getElementById("btnApply").onclick = applyFilters;
     document.getElementById("btnClear").onclick = clearFilters;
     document.getElementById("jqlIn").onkeydown = (e) => {
@@ -7228,8 +7383,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
     });
   }
   async function init() {
+    var _a, _b;
+    const ctx = await import_bridge.view.getContext().catch(() => null);
+    const entryPoint = ((_a = ctx == null ? void 0 : ctx.extension) == null ? void 0 : _a.entryPoint) || (ctx == null ? void 0 : ctx.entryPoint) || "view";
+    const savedConfig = ((_b = ctx == null ? void 0 : ctx.extension) == null ? void 0 : _b.gadgetConfiguration) || (ctx == null ? void 0 : ctx.gadgetConfiguration) || {};
+    if (entryPoint === "edit" || !savedConfig.richFilterId) {
+      await mountConfigForm(ctx);
+      return;
+    }
+    gadgetConfig = savedConfig;
     mount();
-    loadRichFilters();
+    loadRichFilters(gadgetConfig.richFilterId || null);
     makeDropdown("ddStatus", "Status", STATUSES, renderStatus);
     makeDropdown("ddPriority", "Priority", PRIORITIES, renderPriority);
     makeDropdown("ddType", "Type", ISSUE_TYPES, renderType);
@@ -7243,8 +7407,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
     (0, import_bridge.invoke)("getIssues", { richFilterId: FILTER_ID }).then((issues) => {
       const seen = /* @__PURE__ */ new Set();
       (issues || []).forEach((i) => {
-        var _a;
-        const name = (_a = i.fields.assignee) == null ? void 0 : _a.displayName;
+        var _a2;
+        const name = (_a2 = i.fields.assignee) == null ? void 0 : _a2.displayName;
         if (name && !seen.has(name)) {
           seen.add(name);
           state.assignees.push(name);
