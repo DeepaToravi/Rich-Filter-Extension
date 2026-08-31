@@ -268,8 +268,72 @@ resolver.define('updateRichFilter', async ({ payload }) => {
 resolver.define('deleteRichFilter', async ({ payload }) => {
   const { id } = payload || {};
   let filters = (await storage.get('richFilters')) || [];
+  const target = filters.find(f => f.id === id);
+  if (!target) return false;
+  // Move to trash instead of permanent delete
+  const trash = (await storage.get('trashedFilters')) || [];
+  trash.push({ ...target, deletedAt: new Date().toISOString() });
+  await storage.set('trashedFilters', trash);
   filters = filters.filter(f => f.id !== id);
   await storage.set('richFilters', filters);
+  return true;
+});
+
+resolver.define('listTrashedFilters', async () => {
+  return (await storage.get('trashedFilters')) || [];
+});
+
+resolver.define('restoreRichFilter', async ({ payload }) => {
+  const { id } = payload || {};
+  let trash = (await storage.get('trashedFilters')) || [];
+  const target = trash.find(f => f.id === id);
+  if (!target) return false;
+  // Remove deletedAt then push back to active filters
+  const { deletedAt, ...restored } = target;
+  const filters = (await storage.get('richFilters')) || [];
+  filters.push({ ...restored, updatedAt: new Date().toISOString() });
+  await storage.set('richFilters', filters);
+  trash = trash.filter(f => f.id !== id);
+  await storage.set('trashedFilters', trash);
+  return true;
+});
+
+resolver.define('permanentlyDeleteFilter', async ({ payload }) => {
+  const { id } = payload || {};
+  let trash = (await storage.get('trashedFilters')) || [];
+  trash = trash.filter(f => f.id !== id);
+  await storage.set('trashedFilters', trash);
+  return true;
+});
+
+resolver.define('archiveRichFilter', async ({ payload }) => {
+  const { id } = payload || {};
+  let filters = (await storage.get('richFilters')) || [];
+  const target = filters.find(f => f.id === id);
+  if (!target) return false;
+  const archived = (await storage.get('archivedFilters')) || [];
+  archived.push({ ...target, archivedAt: new Date().toISOString() });
+  await storage.set('archivedFilters', archived);
+  filters = filters.filter(f => f.id !== id);
+  await storage.set('richFilters', filters);
+  return true;
+});
+
+resolver.define('listArchivedFilters', async () => {
+  return (await storage.get('archivedFilters')) || [];
+});
+
+resolver.define('restoreFromArchive', async ({ payload }) => {
+  const { id } = payload || {};
+  let archived = (await storage.get('archivedFilters')) || [];
+  const target = archived.find(f => f.id === id);
+  if (!target) return false;
+  const { archivedAt, ...restored } = target;
+  const filters = (await storage.get('richFilters')) || [];
+  filters.push({ ...restored, updatedAt: new Date().toISOString() });
+  await storage.set('richFilters', filters);
+  archived = archived.filter(f => f.id !== id);
+  await storage.set('archivedFilters', archived);
   return true;
 });
 
@@ -284,6 +348,163 @@ resolver.define('getJiraFilters', async () => {
   }));
 });
 
+// ─────────────────────────────────────────────────────────────
+//  BULK OPERATIONS
+// ─────────────────────────────────────────────────────────────
+
+// Move multiple active filters to trash
+resolver.define('bulkMoveToTrash', async ({ payload }) => {
+  const { ids } = payload || {};
+  if (!Array.isArray(ids) || ids.length === 0) return false;
+  let filters = (await storage.get('richFilters')) || [];
+  const trash  = (await storage.get('trashedFilters')) || [];
+  const now    = new Date().toISOString();
+  ids.forEach(id => {
+    const target = filters.find(f => f.id === id);
+    if (target) trash.push({ ...target, deletedAt: now });
+  });
+  await storage.set('trashedFilters', trash);
+  await storage.set('richFilters', filters.filter(f => !ids.includes(f.id)));
+  return true;
+});
+
+// Restore multiple filters from trash to active
+resolver.define('bulkRestoreFromTrash', async ({ payload }) => {
+  const { ids } = payload || {};
+  if (!Array.isArray(ids) || ids.length === 0) return false;
+  let trash   = (await storage.get('trashedFilters')) || [];
+  const active = (await storage.get('richFilters')) || [];
+  const now   = new Date().toISOString();
+  ids.forEach(id => {
+    const target = trash.find(f => f.id === id);
+    if (target) {
+      const { deletedAt, ...restored } = target;
+      active.push({ ...restored, updatedAt: now });
+    }
+  });
+  await storage.set('richFilters', active);
+  await storage.set('trashedFilters', trash.filter(f => !ids.includes(f.id)));
+  return true;
+});
+
+// Permanently delete multiple filters (from trash)
+resolver.define('bulkDeleteForever', async ({ payload }) => {
+  const { ids } = payload || {};
+  if (!Array.isArray(ids) || ids.length === 0) return false;
+  const trash = (await storage.get('trashedFilters')) || [];
+  await storage.set('trashedFilters', trash.filter(f => !ids.includes(f.id)));
+  return true;
+});
+
+// Move multiple active filters to archive
+resolver.define('bulkMoveToArchive', async ({ payload }) => {
+  const { ids } = payload || {};
+  if (!Array.isArray(ids) || ids.length === 0) return false;
+  let filters  = (await storage.get('richFilters')) || [];
+  const archived = (await storage.get('archivedFilters')) || [];
+  const now    = new Date().toISOString();
+  ids.forEach(id => {
+    const target = filters.find(f => f.id === id);
+    if (target) archived.push({ ...target, archivedAt: now });
+  });
+  await storage.set('archivedFilters', archived);
+  await storage.set('richFilters', filters.filter(f => !ids.includes(f.id)));
+  return true;
+});
+
+// Restore multiple filters from archive to active
+resolver.define('bulkRestoreFromArchive', async ({ payload }) => {
+  const { ids } = payload || {};
+  if (!Array.isArray(ids) || ids.length === 0) return false;
+  let archived = (await storage.get('archivedFilters')) || [];
+  const active  = (await storage.get('richFilters')) || [];
+  const now    = new Date().toISOString();
+  ids.forEach(id => {
+    const target = archived.find(f => f.id === id);
+    if (target) {
+      const { archivedAt, ...restored } = target;
+      active.push({ ...restored, updatedAt: now });
+    }
+  });
+  await storage.set('richFilters', active);
+  await storage.set('archivedFilters', archived.filter(f => !ids.includes(f.id)));
+  return true;
+});
+
+// Download usage data as CSV for selected filters
+resolver.define('bulkDownloadUsageData', async ({ payload }) => {
+  const { ids, source } = payload || {};
+  const storeKey = source === 'archived' ? 'archivedFilters'
+                 : source === 'trashed'  ? 'trashedFilters'
+                 : 'richFilters';
+  const all      = (await storage.get(storeKey)) || [];
+  const targets  = ids && ids.length > 0 ? all.filter(f => ids.includes(f.id)) : all;
+  const rows     = [['Name', 'Administrators', 'Visibility', 'Last used', 'Created']];
+  targets.forEach(f => {
+    rows.push([
+      f.name || '',
+      (f.admins || []).join('; '),
+      f.visibility || 'PRIVATE',
+      f.lastUsed || f.updatedAt || '',
+      f.createdAt || '',
+    ]);
+  });
+  return rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+});
+
+// Export selected filters as a JSON backup
+resolver.define('bulkExportToBackup', async ({ payload }) => {
+  const { ids, source } = payload || {};
+  const storeKey = source === 'archived' ? 'archivedFilters'
+                 : source === 'trashed'  ? 'trashedFilters'
+                 : 'richFilters';
+  const all     = (await storage.get(storeKey)) || [];
+  const targets = ids && ids.length > 0 ? all.filter(f => ids.includes(f.id)) : all;
+  return JSON.stringify({ exportedAt: new Date().toISOString(), filters: targets }, null, 2);
+});
+
+// Import filters from a JSON backup file
+// importType: 'newIds' → assign fresh IDs; 'asExported' → keep original IDs (restore)
+resolver.define('importFromBackup', async ({ payload }) => {
+  const { filters, importType } = payload || {};
+  if (!Array.isArray(filters) || filters.length === 0) {
+    return { imported: 0, skipped: 0, errors: ['No filters found in the backup file.'] };
+  }
+
+  const existing = (await storage.get('richFilters')) || [];
+  const existingIds = new Set(existing.map(f => f.id));
+  const now = new Date().toISOString();
+  const errors = [];
+  let imported = 0;
+  let skipped  = 0;
+
+  for (const raw of filters) {
+    if (!raw || typeof raw !== 'object' || !raw.name) {
+      errors.push(`Skipped invalid entry: ${JSON.stringify(raw).slice(0, 60)}`);
+      skipped++;
+      continue;
+    }
+
+    if (importType === 'asExported') {
+      // Keep original ID – skip if a filter with that ID already exists
+      if (existingIds.has(raw.id)) {
+        errors.push(`"${raw.name}" already exists (id: ${raw.id}) — skipped`);
+        skipped++;
+        continue;
+      }
+      existing.push({ ...raw, updatedAt: now });
+    } else {
+      // Create with a fresh ID, regardless of conflicts
+      const newId = `rf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      existing.push({ ...raw, id: newId, createdAt: now, updatedAt: now, lastUsed: null });
+    }
+    imported++;
+  }
+
+  await storage.set('richFilters', existing);
+  return { imported, skipped, errors };
+});
+
 // Store / retrieve the currently active rich filter (shared across all gadgets on a dashboard)
 resolver.define('setActiveRichFilter', async ({ payload }) => {
   const { id } = payload || {};
@@ -295,6 +516,53 @@ resolver.define('getActiveRichFilter', async () => {
   return (await storage.get('ACTIVE_RF')) || null;
 });
 
+// ─────────────────────────────────────────────────────────────
+//  APP CONFIGURATION (Config page)
+// ─────────────────────────────────────────────────────────────
 
+// Load saved app-level permissions config
+resolver.define('getAppConfig', async () => {
+  return (await storage.get('appConfig')) || null;
+});
+
+// Persist app-level permissions config
+resolver.define('saveAppConfig', async ({ payload }) => {
+  const { config } = payload || {};
+  if (!config || typeof config !== 'object') return false;
+  await storage.set('appConfig', config);
+  return true;
+});
+
+// Search Jira groups by query string (used by the group picker in Config page)
+resolver.define('searchJiraGroups', async ({ payload }) => {
+  const { query } = payload || {};
+  // Empty query returns all groups (for initial dropdown on focus)
+  const q = (query || '').trim();
+  try {
+    const qs = q ? `query=${encodeURIComponent(q)}&maxResults=20` : 'maxResults=50';
+    const res  = await api.asUser().requestJira(
+      route`/rest/api/3/groups/picker?${qs}`
+    );
+    const data = await res.json();
+    const groups = Array.isArray(data?.groups) ? data.groups : [];
+    return groups.map(g => g.name).filter(Boolean);
+  } catch {
+    return [];
+  }
+});
+
+// Permanently wipe all app storage keys
+// The list covers every key written by any resolver in this file.
+resolver.define('deleteAllAppData', async () => {
+  const keys = [
+    'richFilters',
+    'trashedFilters',
+    'archivedFilters',
+    'ACTIVE_RF',
+    'appConfig',
+  ];
+  await Promise.all(keys.map(k => storage.delete(k)));
+  return true;
+});
 
 export const handler = resolver.getDefinitions();

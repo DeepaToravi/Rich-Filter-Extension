@@ -14,6 +14,201 @@ html, body {
   min-height: 100vh;
 }
 
+/* =============================================================
+   LAYOUT — sidebar + content
+   ============================================================= */
+#app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.rf-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+.rf-sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #fff;
+  border-right: 1px solid #dfe1e6;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.rf-sidebar-header {
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid #f0f1f3;
+}
+
+.rf-sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rf-sidebar-logo-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.rf-sidebar-logo-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #172b4d;
+  letter-spacing: -0.2px;
+}
+
+.rf-sidebar-logo-sub {
+  font-size: 11px;
+  color: #97a0af;
+  margin-top: 2px;
+  padding-left: 34px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.rf-sidebar-nav {
+  flex: 1;
+  padding: 10px 0;
+  overflow-y: auto;
+}
+
+/* ── Nav sections ── */
+.rf-nav-section {
+  padding: 4px 0 6px;
+}
+
+.rf-nav-section + .rf-nav-section {
+  border-top: 1px solid #f0f1f3;
+  margin-top: 4px;
+  padding-top: 10px;
+}
+
+.rf-nav-section-title {
+  padding: 6px 16px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #97a0af;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* ── Nav items ── */
+.rf-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 14px 8px 16px;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  font-family: inherit;
+  font-size: 14px;
+  color: #42526e;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s, color 0.1s;
+  line-height: 1.4;
+}
+
+.rf-nav-item:hover {
+  background: #f4f5f7;
+  color: #172b4d;
+}
+
+.rf-nav-item.active {
+  background: #deebff;
+  color: #0052cc;
+  font-weight: 600;
+  border-left-color: #0052cc;
+}
+
+.rf-nav-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+  line-height: 1;
+}
+
+.rf-nav-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Sidebar footer ── */
+.rf-sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #f0f1f3;
+  font-size: 11px;
+  color: #97a0af;
+  flex-shrink: 0;
+}
+
+/* ── Content area ── */
+.rf-content {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+#content-area {
+  flex: 1;
+  min-height: 100%;
+}
+
+/* ── Placeholder pages ── */
+.rf-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 60px 24px;
+  background: #fff;
+}
+
+.rf-placeholder-inner {
+  text-align: center;
+  max-width: 420px;
+}
+
+.rf-placeholder-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.rf-placeholder-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #172b4d;
+  margin-bottom: 10px;
+}
+
+.rf-placeholder-desc {
+  font-size: 14px;
+  color: #6b778c;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+
+
 a { color: #0052cc; text-decoration: none; cursor: pointer; }
 a:hover { text-decoration: underline; }
 button { font-family: inherit; cursor: pointer; }
@@ -313,6 +508,29 @@ select.fi { cursor: pointer; background: #fafbfc; padding-right: 24px; }
 
 /* ---------- Views ---------- */
 .vab { display: flex; gap: 10px; margin-top: 16px; }
+
+/* Column picker */
+.cp-tab {
+  padding: 9px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b778c;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  letter-spacing: .4px;
+  white-space: nowrap;
+}
+.cp-tab.act { color: #0052cc; border-bottom-color: #0052cc; background: #fff; }
+.cp-tab:hover:not(.act) { background: #f4f5f7; }
+.cp-item {
+  padding: 9px 16px;
+  font-size: 13px;
+  color: #172b4d;
+  cursor: pointer;
+}
+.cp-item:hover { background: #e8f0fe; color: #0052cc; }
 
 /* ---------- Inline empty state ---------- */
 .es { text-align: center; padding: 40px 16px; border: 1px dashed #dfe1e6; border-radius: 4px; background: #fafbfc; }

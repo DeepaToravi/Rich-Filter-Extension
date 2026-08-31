@@ -9,6 +9,7 @@ modules:
       resolver:
         function: resolver
       viewportSize: large
+      configurable: true
 
     # 📋 2. RESULTS GADGET (Table)
     - key: rich-filter-results
