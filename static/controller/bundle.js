@@ -6740,6 +6740,62 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
 .modal-footer .btn-save{padding:5px 12px;background:#0052CC;border:none;border-radius:3px;cursor:pointer;font-size:12px;color:#fff;font-weight:600}
 `;
   var gadgetConfig = {};
+  var CONFIG_CSS = `
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;color:#172b4d;background:#fff}
+.cfg-wrap{padding:16px 20px 20px;background:#fff;max-width:420px}.cfg-field{margin-bottom:16px}
+.cfg-label{font-size:12px;font-weight:600;color:#172b4d;margin-bottom:6px;display:block;line-height:1.4}
+.cfg-req{color:#DE350B;margin-left:2px}
+.cfg-select-wrap{position:relative}
+.cfg-select{width:100%;padding:8px 32px 8px 10px;border:2px solid #DFE1E6;border-radius:3px;font-size:14px;color:#172b4d;background:#fff;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23172b4d' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.cfg-select:focus{border-color:#4C9AFF;box-shadow:0 0 0 2px rgba(76,154,255,.2)}
+.cfg-hint{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-top:5px;line-height:1.4}.cfg-hint span{font-size:11px;color:#42526E;flex:1}
+.cfg-link{font-size:11px;color:#0052CC;text-decoration:none;white-space:nowrap;flex-shrink:0}.cfg-link:hover{text-decoration:underline}
+.cfg-error{font-size:11px;color:#DE350B;margin-top:4px}
+.cfg-info-box{display:flex;gap:10px;align-items:flex-start;background:#DEEBFF;border-radius:3px;padding:12px;margin-bottom:16px}
+.cfg-info-icon{width:20px;height:20px;background:#0052CC;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px}
+.cfg-info-text{font-size:13px;color:#0052CC;line-height:1.5}
+.cfg-section-label{font-size:12px;font-weight:600;color:#172b4d;display:block;margin-bottom:10px}
+.cfg-radio-group{display:flex;flex-direction:column;gap:10px}
+.cfg-radio-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#172b4d}
+.cfg-radio-item input[type=radio]{width:16px;height:16px;cursor:pointer;accent-color:#0052CC;flex-shrink:0}
+.cfg-checkbox-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#172b4d;margin-bottom:20px}
+.cfg-checkbox-item input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#0052CC;flex-shrink:0}
+.cfg-footer{display:flex;align-items:center;justify-content:space-between}
+.cfg-footer-left{display:flex;align-items:center;gap:10px}
+.cfg-submit{padding:8px 16px;background:#0052CC;color:#fff;border:none;border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.2}.cfg-submit:hover{background:#0065FF}
+.cfg-cancel{background:none;border:none;color:#172b4d;font-size:14px;cursor:pointer;padding:8px 4px;line-height:1.2}.cfg-cancel:hover{color:#0052CC}
+.cfg-grid-icon{color:#5E6C84;opacity:.7;display:flex;align-items:center}
+`;
+  var VIEW2_CSS = `
+/* Container */
+.ctrl-v2{background:#fff;border-bottom:3px solid #0052CC;padding:5px 10px 0}
+/* One combined row: QF pill buttons + dropdown filter buttons */
+.v2-filter-row{display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding:5px 0 4px;min-height:34px}
+/* display:contents makes #qfRow invisible as a box; its children become direct flex items */
+.v2-qf-inline{display:contents}
+/* Bottom action bar */
+.v2-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 5px;border-top:1px solid #EEF0F4;margin-top:1px;gap:6px}
+.v2-bar-left{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.v2-bar-right{display:flex;align-items:center;gap:3px;flex-shrink:0}
+/* Left bar elements */
+.v2-grid-icon{opacity:.5;flex-shrink:0;display:inline-flex;align-items:center}
+.v2-pg-btn{padding:1px 7px;background:#F4F5F7;border:1px solid #DFE1E6;border-radius:3px;font-size:12px;color:#172b4d;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:2px;height:22px;min-width:36px;justify-content:center}
+.v2-pg-btn:hover{background:#EBECF0}
+.v2-icon-btn{padding:2px 5px;background:none;border:1px solid #DFE1E6;border-radius:3px;color:#5E6C84;cursor:pointer;font-size:11px;display:inline-flex;align-items:center;line-height:1;height:22px}
+.v2-icon-btn:hover{background:#F4F5F7;border-color:#97A0AF}
+.v2-more-btn{letter-spacing:2px;padding:2px 4px;font-size:13px}
+/* Right bar: JQL label, back arrow, apply circle, clear X */
+.v2-jql-lbl{padding:0 5px;background:none;border:none;font-size:12px;color:#5E6C84;cursor:pointer;font-weight:700;letter-spacing:.4px;line-height:22px}
+.v2-jql-lbl:hover{color:#0052CC}.v2-jql-lbl.active{color:#0052CC}
+.v2-icon-action{width:22px;height:22px;background:none;border:1px solid #DFE1E6;border-radius:3px;font-size:12px;color:#5E6C84;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.v2-icon-action:hover{background:#F4F5F7}
+.v2-apply-btn{width:24px;height:24px;background:#0065B3;border:none;border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.v2-apply-btn:hover{background:#0052CC}
+.v2-clear-btn{width:22px;height:22px;background:none;border:1px solid #DFE1E6;border-radius:3px;font-size:11px;color:#5E6C84;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.v2-clear-btn:hover{background:#FFEBE6;color:#BF2600;border-color:#FF7452}
+/* RF badge */
+.rf-pick-badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600;background:#DEEBFF;color:#0052CC}
+`;
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
@@ -6934,7 +6990,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
       document.querySelectorAll(".qf-btn").forEach((b) => b.classList.remove("active"));
       el.classList.add("active");
       state.filters = jql ? { baseJql: jql } : {};
-      document.getElementById("jqlIn").value = jql || "";
+      const _jqlIn = document.getElementById("jqlIn");
+      if (_jqlIn) _jqlIn.value = jql || "";
       refreshAllLabels();
       refreshChips();
       pushFilters();
@@ -6975,8 +7032,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
         if (!data) return;
         state.filters = { ...data };
         delete state.filters.savedAt;
-        if (state.filters.baseJql) document.getElementById("jqlIn").value = state.filters.baseJql;
-        else document.getElementById("jqlIn").value = "";
+        const _jqlIn = document.getElementById("jqlIn");
+        if (_jqlIn) _jqlIn.value = state.filters.baseJql || "";
         refreshAllLabels();
         refreshChips();
         pushFilters();
@@ -7035,15 +7092,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
     return (0, import_bridge.invoke)("updateFilterState", { richFilterId: FILTER_ID, filters: { ...state.filters } }).catch((err) => console.error("updateFilterState error:", err));
   }
   function applyFilters() {
-    const jql = document.getElementById("jqlIn").value.trim();
+    var _a;
+    const jql = (((_a = document.getElementById("jqlIn")) == null ? void 0 : _a.value) || "").trim();
     if (jql) state.filters.baseJql = jql;
     else delete state.filters.baseJql;
     pushFilters().then(() => {
-      const btn = document.getElementById("btnApply");
+      const btn = document.getElementById("btnApply") || document.getElementById("v2Apply");
+      if (!btn) return;
+      const origText = btn.textContent;
       btn.textContent = "\u2713 Applied";
       btn.style.background = "#00875A";
       setTimeout(() => {
-        btn.textContent = "Apply";
+        btn.textContent = origText;
         btn.style.background = "";
       }, 1500);
     });
@@ -7051,14 +7111,70 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
   function clearFilters() {
     var _a;
     state.filters = {};
-    document.getElementById("jqlIn").value = "";
+    const _jqlIn = document.getElementById("jqlIn");
+    if (_jqlIn) _jqlIn.value = "";
     document.querySelectorAll(".qf-btn").forEach((b) => b.classList.remove("active"));
     (_a = document.querySelector(".qf-btn")) == null ? void 0 : _a.classList.add("active");
     refreshAllLabels();
     refreshChips();
     pushFilters();
   }
-  function showModal({ title, fields, onSave }) {
+  function showToast(msg, type = "error") {
+    var _a;
+    (_a = document.getElementById("cfgToast")) == null ? void 0 : _a.remove();
+    const t = document.createElement("div");
+    t.id = "cfgToast";
+    const bg = type === "error" ? "#DE350B" : "#0052CC";
+    const ico = type === "error" ? "\u2715" : "\u2139";
+    t.style.cssText = [
+      "position:fixed",
+      "top:16px",
+      "left:50%",
+      "transform:translateX(-50%)",
+      `background:${bg}`,
+      "color:#fff",
+      "padding:10px 18px 10px 14px",
+      "border-radius:4px",
+      "font-size:13px",
+      "font-family:inherit",
+      "font-weight:600",
+      "box-shadow:0 4px 16px rgba(0,0,0,.25)",
+      "z-index:999999",
+      "display:flex",
+      "align-items:center",
+      "gap:8px",
+      "white-space:nowrap",
+      "cursor:pointer",
+      "max-width:90vw"
+    ].join(";");
+    t.innerHTML = `<span>${ico}</span><span style="font-weight:400">${esc(msg)}</span>`;
+    document.body.appendChild(t);
+    const dismiss = () => {
+      clearTimeout(tid);
+      t.remove();
+    };
+    const tid = setTimeout(dismiss, 6e3);
+    t.onclick = dismiss;
+  }
+  function showModal({ title, fields, onSave, _isError, _errorMsg }) {
+    if (_isError) {
+      const errOverlay = document.createElement("div");
+      errOverlay.className = "modal-overlay";
+      errOverlay.innerHTML = `
+      <div class="modal">
+        <h3 style="color:#DE350B">${esc(title)}</h3>
+        <p style="font-size:13px;color:#42526E;margin-bottom:14px">${esc(_errorMsg || "")}</p>
+        <div class="modal-footer">
+          <button class="btn-save" id="modalClose">OK</button>
+        </div>
+      </div>`;
+      document.body.appendChild(errOverlay);
+      errOverlay.querySelector("#modalClose").onclick = () => errOverlay.remove();
+      errOverlay.onclick = (e) => {
+        if (e.target === errOverlay) errOverlay.remove();
+      };
+      return;
+    }
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     overlay.innerHTML = `
@@ -7176,8 +7292,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
   }
   async function mountConfigForm(ctx) {
     var _a;
-    const savedConfig = ((_a = ctx == null ? void 0 : ctx.extension) == null ? void 0 : _a.gadgetConfiguration) || {};
-    const richFilters = await (0, import_bridge.invoke)("listRichFilters").catch(() => []);
+    if (!document.getElementById("cfg-styles")) {
+      const s = document.createElement("style");
+      s.id = "cfg-styles";
+      s.textContent = CONFIG_CSS;
+      document.head.appendChild(s);
+    }
+    const savedConfig = ((_a = ctx == null ? void 0 : ctx.extension) == null ? void 0 : _a.gadgetConfiguration) || (ctx == null ? void 0 : ctx.gadgetConfiguration) || {};
+    let richFilters = [];
+    let loadError = "";
+    try {
+      richFilters = await (0, import_bridge.invoke)("listRichFilters");
+      if (!Array.isArray(richFilters)) {
+        richFilters = [];
+      }
+    } catch (e) {
+      console.error("listRichFilters failed:", e);
+      loadError = (e == null ? void 0 : e.message) || "Could not load rich filters. Check console for details.";
+    }
     let selectedRfId = savedConfig.richFilterId || "";
     let quickMode = savedConfig.quickFiltersMode || "all";
     let enableJql = savedConfig.enableJql !== false;
@@ -7309,10 +7441,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
       });
     }
     function renderForm() {
+      var _a2, _b;
       const opts = richFilters.map(
         (f) => `<option value="${esc(f.id)}" ${f.id === selectedRfId ? "selected" : ""}>${esc(f.name)}</option>`
       ).join("");
       const starHtml = selectedRfId ? `<span class="cfg-rf-star">\u2B50</span>` : "";
+      const rfLoadHint = loadError ? `<div class="cfg-warn" style="margin-top:8px"><span class="cfg-warn-icon">\u26A0\uFE0F</span><span>${esc(loadError)} \u2014 <a href="#" id="cfgRetryLoad" style="color:#BF2600">Retry</a></span></div>` : richFilters.length === 0 ? `<div style="margin-top:10px;padding:10px 12px;background:#FFFAE6;border:1px solid #FFD966;border-radius:4px;font-size:13px;color:#412005">
+            <strong>No rich filters found in this environment.</strong><br>
+            <span style="font-size:12px">You must create a rich filter before configuring this gadget.</span><br>
+            <a href="#" id="cfgOpenList2" style="font-size:12px;color:#0052CC;font-weight:600;margin-top:4px;display:inline-block">\u2192 Create a rich filter now</a>
+           </div>` : "";
       document.getElementById("app").innerHTML = `
       <div class="cfg-wrap">
 
@@ -7327,8 +7465,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
           </div>
           <div class="cfg-hint">
             <span class="cfg-hint-text">The rich filter to be used as the basis for the gadget</span>
-            <a href="#" id="cfgOpenList" class="cfg-link">Open rich filter config</a>
+            <a href="#" id="cfgOpenList" class="cfg-link">Open rich filters list</a>
           </div>
+          ${rfLoadHint}
           ${formError ? `<div class="cfg-error">${esc(formError)}</div>` : ""}
         </div>
 
@@ -7366,7 +7505,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
 
         <div class="cfg-footer">
           <div class="cfg-footer-left">
-            <button class="cfg-submit" id="cfgSubmit">Submit</button>
+            <button class="cfg-submit" id="cfgSubmit" ${richFilters.length === 0 ? 'disabled style="opacity:.5;cursor:not-allowed"' : ""}>Submit</button>
             <button class="cfg-cancel" id="cfgCancel">Cancel</button>
           </div>
           <div class="cfg-grid-icon">
@@ -7400,25 +7539,72 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
         enableJql = e.target.checked;
       };
       document.getElementById("cfgSubmit").onclick = async () => {
+        var _a3, _b2, _c;
         formError = "";
         if (!selectedRfId) {
-          formError = "Please select a rich filter.";
-          renderForm();
+          showToast(
+            richFilters.length === 0 ? 'No rich filters exist yet \u2014 create one first via "Open rich filter config"' : "Please select a rich filter from the dropdown"
+          );
+          (_a3 = document.getElementById("cfgRfSel")) == null ? void 0 : _a3.scrollIntoView({ block: "center", behavior: "smooth" });
+          (_b2 = document.getElementById("cfgRfSel")) == null ? void 0 : _b2.focus();
           return;
         }
-        if (quickMode === "customize" && customizedFilters.length === 0) {
+        const realFilters = customizedFilters.filter((k) => k !== "__smart_placeholder__");
+        if (quickMode === "customize" && realFilters.length === 0) {
+          showToast("Please select at least one quick filter to display");
+          (_c = document.getElementById("cfgCustomizePanel")) == null ? void 0 : _c.scrollIntoView({ block: "nearest", behavior: "smooth" });
           renderCustomizePanel();
           return;
         }
+        const overlay = document.createElement("div");
+        overlay.id = "cfgSavingOverlay";
+        overlay.style.cssText = "position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:inherit";
+        overlay.innerHTML = `
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style="animation:spin .8s linear infinite">
+          <circle cx="14" cy="14" r="11" stroke="#DFE1E6" stroke-width="3"/>
+          <path d="M14 3 a11 11 0 0 1 11 11" stroke="#0052CC" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span style="font-size:14px;color:#172b4d;font-weight:600">Saving\u2026</span>`;
+        if (!document.getElementById("cfgSpinStyles")) {
+          const st = document.createElement("style");
+          st.id = "cfgSpinStyles";
+          st.textContent = "@keyframes spin{to{transform:rotate(360deg)}}";
+          document.head.appendChild(st);
+        }
+        document.body.appendChild(overlay);
+        const removeOverlay = () => {
+          try {
+            document.body.removeChild(overlay);
+          } catch (_) {
+          }
+        };
         try {
-          await import_bridge.view.submit({
-            richFilterId: selectedRfId,
-            quickFiltersMode: quickMode,
-            enableJql,
-            customizedFilters: quickMode === "customize" ? customizedFilters : []
-          });
+          await Promise.race([
+            import_bridge.view.submit({
+              richFilterId: selectedRfId,
+              quickFiltersMode: quickMode,
+              enableJql,
+              customizedFilters: quickMode === "customize" ? customizedFilters : []
+            }),
+            new Promise(
+              (_, reject) => setTimeout(() => reject(new Error("Save timed out \u2014 please try again.")), 1e4)
+            )
+          ]);
+          removeOverlay();
         } catch (e) {
+          removeOverlay();
+          const msg = (e == null ? void 0 : e.message) || "Failed to save. Please try again.";
           console.error("view.submit failed:", e);
+          showToast(msg);
+          showModal({
+            title: "Save failed",
+            fields: [],
+            _isError: true,
+            _errorMsg: msg,
+            onSave() {
+            }
+          });
+          formError = msg;
         }
       };
       document.getElementById("cfgCancel").onclick = () => {
@@ -7436,6 +7622,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
         } catch (_) {
         }
       };
+      (_a2 = document.getElementById("cfgOpenList2")) == null ? void 0 : _a2.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+          const info = await (0, import_bridge.invoke)("getSiteInfo");
+          const appId = "0b40a7d9-0481-40b2-9055-a954178f4efe";
+          if (info == null ? void 0 : info.baseUrl) window.open(`${info.baseUrl}/jira/apps/${appId}/rich-filters-app`, "_blank", "noopener");
+        } catch (_) {
+        }
+      });
+      (_b = document.getElementById("cfgRetryLoad")) == null ? void 0 : _b.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+          const reloaded = await (0, import_bridge.invoke)("listRichFilters");
+          if (Array.isArray(reloaded)) {
+            richFilters.length = 0;
+            reloaded.forEach((f) => richFilters.push(f));
+            loadError = "";
+          }
+        } catch (err) {
+          console.error("Retry listRichFilters failed:", err);
+        }
+        renderForm();
+      });
       document.addEventListener("click", (e) => {
         if (qfDropdownOpen && !e.target.closest("#cfgQfDropdown") && !e.target.closest("#cfgQfTrigger")) {
           qfDropdownOpen = false;
@@ -7446,28 +7655,45 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
     }
     renderForm();
   }
+  function mountUnconfigured() {
+    if (!document.getElementById("cfg-styles")) {
+      const s = document.createElement("style");
+      s.id = "cfg-styles";
+      s.textContent = CONFIG_CSS;
+      document.head.appendChild(s);
+    }
+    document.getElementById("app").innerHTML = `
+    <div style="padding:24px 20px;text-align:center;font-family:inherit">
+      <div style="width:44px;height:44px;background:#DEEBFF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="11" cy="11" r="9" stroke="#0052CC" stroke-width="1.8"/>
+          <path d="M11 7v1M11 10v5" stroke="#0052CC" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:#172b4d;margin-bottom:6px">Rich Filter Controller not configured</div>
+      <div style="font-size:13px;color:#42526E;margin-bottom:14px">Click the <strong>\u270F\uFE0F Edit</strong> icon (top-right of this gadget) to configure it.</div>
+    </div>`;
+  }
   function mount() {
     if (!document.getElementById("ctrl-styles")) {
       const s = document.createElement("style");
       s.id = "ctrl-styles";
-      s.textContent = CSS;
+      s.textContent = CSS + VIEW2_CSS;
       document.head.appendChild(s);
     }
+    const jqlOnly = gadgetConfig.quickFiltersMode === "jql";
+    const jqlDisabled = gadgetConfig.enableJql === false;
     document.getElementById("app").innerHTML = `
-    <div class="ctrl">
+    <div class="ctrl-v2">
 
-      <!-- Row 0: Rich Filter selector -->
-      <div class="rf-pick-row">
-        <span class="rf-pick-lbl">Rich Filter:</span>
-        <select id="rfPickSel" class="rf-pick-sel">
-          <option value="">Select a rich filter\u2026</option>
-        </select>
-        <span id="rfPickBadge" style="display:none" class="rf-pick-badge"></span>
-        <span id="rfPickHint" class="rf-pick-hint">No filter selected \u2014 all issues shown</span>
-      </div>
+      <!-- Hidden: used by loadRichFilters internally -->
+      <select id="rfPickSel" style="display:none"></select>
+      <span   id="rfPickHint" style="display:none"></span>
 
-      <!-- Row 1: Filter dropdowns -->
-      <div class="filter-row">
+      <!-- Combined row: QF pill buttons (static/smart) + dropdown filter pills -->
+      <div class="v2-filter-row" id="v2FilterRow"${jqlOnly ? ' style="display:none"' : ""}>
+        <!-- #qfRow has display:contents so its children sit inline with the dd-wraps -->
+        <div class="v2-qf-inline" id="qfRow"></div>
         <div class="dd-wrap" id="ddProject"></div>
         <div class="dd-wrap" id="ddStatus"></div>
         <div class="dd-wrap" id="ddAssignee"></div>
@@ -7477,46 +7703,81 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
         <div class="dd-wrap" id="ddSprint"></div>
       </div>
 
-      <!-- Row 2: JQL + action buttons -->
-      <div class="jql-row">
-        <input id="jqlIn" class="jql-in" placeholder="JQL or text search\u2026 (Enter to apply)" autocomplete="off"/>
-        <button class="btn btn-clear" id="btnClear">\u2715 Clear</button>
-        <button class="btn btn-apply" id="btnApply">Apply</button>
-      </div>
-
-      <!-- Row 3: Active filter chips -->
+      <!-- Active filter chips (auto-hidden when empty) -->
       <div class="chips" id="chips"></div>
 
-      <!-- Row 4: Quick Filters -->
-      <div class="section" id="qfSection">
-        <div class="section-hdr">
-          <span class="section-title">\u26A1 Quick Filters</span>
-          <button class="btn-icon" onclick="APP.addSmartFilter()" title="Add custom quick filter">\uFF0B Add</button>
-        </div>
-        <div class="qf-row" id="qfRow"></div>
+      <!-- JQL input row: always in DOM, shown via JQL button or in jql-only mode -->
+      <div class="jql-row" id="jqlRow" style="${jqlOnly ? "" : "display:none"}">
+        <input id="jqlIn" class="jql-in" placeholder="Enter JQL\u2026 (Enter to apply)" autocomplete="off"/>
       </div>
 
-      <!-- Row 5: Saved Presets -->
-      <div class="section">
-        <div class="section-hdr">
-          <span class="section-title">\u{1F4CB} Presets</span>
+      <!-- Bottom action bar -->
+      <div class="v2-bar">
+        <div class="v2-bar-left">
+          <svg class="v2-grid-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="0" y="0" width="6" height="6" rx="1" fill="#97A0AF"/>
+            <rect x="8" y="0" width="6" height="6" rx="1" fill="#97A0AF"/>
+            <rect x="0" y="8" width="6" height="6" rx="1" fill="#97A0AF"/>
+            <rect x="8" y="8" width="6" height="6" rx="1" fill="#97A0AF"/>
+          </svg>
+          <button class="v2-pg-btn" id="v2PgBtn"><span id="v2PgVal">15</span>\xA0\u25BE</button>
+          <button class="v2-icon-btn" id="v2ExportBtn" title="Export">
+            <svg width="12" height="11" viewBox="0 0 12 11" fill="none"><path d="M1 7.5V9.5C1 10.05 1.45 10.5 2 10.5H10C10.55 10.5 11 10.05 11 9.5V7.5" stroke="#5E6C84" stroke-width="1.3" stroke-linecap="round"/><path d="M6 1V7.5M3.5 5L6 7.5 8.5 5" stroke="#5E6C84" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="v2-icon-btn" id="v2ShareBtn" title="Copy link">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="9" cy="2" r="1.5" stroke="#5E6C84" stroke-width="1.2"/><circle cx="2" cy="6" r="1.5" stroke="#5E6C84" stroke-width="1.2"/><circle cx="9" cy="10" r="1.5" stroke="#5E6C84" stroke-width="1.2"/><path d="M3.5 5.5L7.5 3M3.5 6.5L7.5 9" stroke="#5E6C84" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </button>
+          <button class="v2-icon-btn v2-more-btn" id="v2MoreBtn" title="More">\u22EF</button>
+          <span id="rfPickBadge" class="rf-pick-badge" style="display:none"></span>
         </div>
-        <div class="preset-row" id="presetRow"><span style="font-size:11px;color:#6B778C">No presets saved yet</span></div>
+        <div class="v2-bar-right">
+          ${!jqlDisabled && !jqlOnly ? `<button class="v2-jql-lbl" id="v2JqlBtn">JQL</button>` : ""}
+          <button class="v2-icon-action" id="v2CancelBtn" title="Cancel / clear all">\u2190</button>
+          <button class="v2-apply-btn" id="v2Apply" title="Apply filters">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M6.5 1.5a5 5 0 1 0 4.33 2.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+              <polyline points="10.5,1.5 10.5,4 8,4" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="v2-clear-btn" id="v2ClearBtn" title="Clear all filters">\u2715</button>
+        </div>
       </div>
 
     </div>`;
-    if (gadgetConfig.enableJql === false) {
-      const jqlIn = document.getElementById("jqlIn");
-      if (jqlIn) jqlIn.style.display = "none";
+    document.getElementById("v2Apply").onclick = applyFilters;
+    document.getElementById("v2CancelBtn").onclick = clearFilters;
+    document.getElementById("v2ClearBtn").onclick = clearFilters;
+    if (!jqlDisabled && !jqlOnly) {
+      document.getElementById("v2JqlBtn").onclick = () => {
+        var _a;
+        const jqlRow = document.getElementById("jqlRow");
+        const filterRow = document.getElementById("v2FilterRow");
+        const btn = document.getElementById("v2JqlBtn");
+        const jqlOpen = jqlRow.style.display !== "none";
+        jqlRow.style.display = jqlOpen ? "none" : "";
+        filterRow.style.display = jqlOpen ? "" : "none";
+        btn.classList.toggle("active", !jqlOpen);
+        if (!jqlOpen) (_a = document.getElementById("jqlIn")) == null ? void 0 : _a.focus();
+      };
     }
-    if (gadgetConfig.quickFiltersMode === "jql") {
-      const qfSec = document.getElementById("qfSection");
-      if (qfSec) qfSec.style.display = "none";
-    }
-    document.getElementById("btnApply").onclick = applyFilters;
-    document.getElementById("btnClear").onclick = clearFilters;
     document.getElementById("jqlIn").onkeydown = (e) => {
       if (e.key === "Enter") applyFilters();
+    };
+    const PG_SIZES = [15, 25, 50, 100];
+    let pgSize = 15;
+    document.getElementById("v2PgBtn").onclick = (e) => {
+      e.stopPropagation();
+      pgSize = PG_SIZES[(PG_SIZES.indexOf(pgSize) + 1) % PG_SIZES.length];
+      document.getElementById("v2PgVal").textContent = pgSize;
+      (0, import_bridge.invoke)("updateFilterState", { richFilterId: FILTER_ID, filters: { ...state.filters, maxResults: pgSize } }).catch(() => {
+      });
+    };
+    document.getElementById("v2ShareBtn").onclick = () => {
+      var _a;
+      try {
+        (_a = navigator.clipboard) == null ? void 0 : _a.writeText(window.location.href);
+      } catch (_) {
+      }
     };
     document.addEventListener("click", (e) => {
       if (!e.target.closest(".dd-wrap") && !e.target.closest(".modal")) closeAll();
@@ -7527,8 +7788,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
     const ctx = await import_bridge.view.getContext().catch(() => null);
     const entryPoint = ((_a = ctx == null ? void 0 : ctx.extension) == null ? void 0 : _a.entryPoint) || (ctx == null ? void 0 : ctx.entryPoint) || "view";
     const savedConfig = ((_b = ctx == null ? void 0 : ctx.extension) == null ? void 0 : _b.gadgetConfiguration) || (ctx == null ? void 0 : ctx.gadgetConfiguration) || {};
-    if (entryPoint === "edit" || !savedConfig.richFilterId) {
+    if (entryPoint === "edit") {
       await mountConfigForm(ctx);
+      return;
+    }
+    if (!savedConfig.richFilterId) {
+      mountUnconfigured();
       return;
     }
     gadgetConfig = savedConfig;

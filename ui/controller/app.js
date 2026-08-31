@@ -141,6 +141,38 @@ const CONFIG_CSS = `
 .cfg-grid-icon{color:#5E6C84;opacity:.7;display:flex;align-items:center}
 `;
 
+// ── COMPACT VIEW CSS (Image 3 style) ─────────────────────────────────────
+const VIEW2_CSS = `
+/* Container */
+.ctrl-v2{background:#fff;border-bottom:3px solid #0052CC;padding:5px 10px 0}
+/* One combined row: QF pill buttons + dropdown filter buttons */
+.v2-filter-row{display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding:5px 0 4px;min-height:34px}
+/* display:contents makes #qfRow invisible as a box; its children become direct flex items */
+.v2-qf-inline{display:contents}
+/* Bottom action bar */
+.v2-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 5px;border-top:1px solid #EEF0F4;margin-top:1px;gap:6px}
+.v2-bar-left{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.v2-bar-right{display:flex;align-items:center;gap:3px;flex-shrink:0}
+/* Left bar elements */
+.v2-grid-icon{opacity:.5;flex-shrink:0;display:inline-flex;align-items:center}
+.v2-pg-btn{padding:1px 7px;background:#F4F5F7;border:1px solid #DFE1E6;border-radius:3px;font-size:12px;color:#172b4d;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:2px;height:22px;min-width:36px;justify-content:center}
+.v2-pg-btn:hover{background:#EBECF0}
+.v2-icon-btn{padding:2px 5px;background:none;border:1px solid #DFE1E6;border-radius:3px;color:#5E6C84;cursor:pointer;font-size:11px;display:inline-flex;align-items:center;line-height:1;height:22px}
+.v2-icon-btn:hover{background:#F4F5F7;border-color:#97A0AF}
+.v2-more-btn{letter-spacing:2px;padding:2px 4px;font-size:13px}
+/* Right bar: JQL label, back arrow, apply circle, clear X */
+.v2-jql-lbl{padding:0 5px;background:none;border:none;font-size:12px;color:#5E6C84;cursor:pointer;font-weight:700;letter-spacing:.4px;line-height:22px}
+.v2-jql-lbl:hover{color:#0052CC}.v2-jql-lbl.active{color:#0052CC}
+.v2-icon-action{width:22px;height:22px;background:none;border:1px solid #DFE1E6;border-radius:3px;font-size:12px;color:#5E6C84;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.v2-icon-action:hover{background:#F4F5F7}
+.v2-apply-btn{width:24px;height:24px;background:#0065B3;border:none;border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.v2-apply-btn:hover{background:#0052CC}
+.v2-clear-btn{width:22px;height:22px;background:none;border:1px solid #DFE1E6;border-radius:3px;font-size:11px;color:#5E6C84;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.v2-clear-btn:hover{background:#FFEBE6;color:#BF2600;border-color:#FF7452}
+/* RF badge */
+.rf-pick-badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600;background:#DEEBFF;color:#0052CC}
+`;
+
 // ── HELPERS ────────────────────────────────────────────────────────────────
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -352,7 +384,8 @@ window.APP = {
     document.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
     state.filters = jql ? { baseJql: jql } : {};
-    document.getElementById('jqlIn').value = jql || '';
+    const _jqlIn = document.getElementById('jqlIn');
+    if (_jqlIn) _jqlIn.value = jql || '';
     refreshAllLabels(); refreshChips();
     pushFilters();
   },
@@ -398,8 +431,8 @@ window.APP = {
       if (!data) return;
       state.filters = { ...data };
       delete state.filters.savedAt;
-      if (state.filters.baseJql) document.getElementById('jqlIn').value = state.filters.baseJql;
-      else document.getElementById('jqlIn').value = '';
+      const _jqlIn = document.getElementById('jqlIn');
+      if (_jqlIn) _jqlIn.value = state.filters.baseJql || '';
       refreshAllLabels(); refreshChips();
       pushFilters();
     }).catch(console.error);
@@ -490,27 +523,69 @@ function pushFilters() {
 }
 
 function applyFilters() {
-  const jql = document.getElementById('jqlIn').value.trim();
+  const jql = (document.getElementById('jqlIn')?.value || '').trim();
   if (jql) state.filters.baseJql = jql;
   else delete state.filters.baseJql;
   pushFilters().then(() => {
-    const btn = document.getElementById('btnApply');
+    const btn = document.getElementById('btnApply') || document.getElementById('v2Apply');
+    if (!btn) return;
+    const origText = btn.textContent;
     btn.textContent = '✓ Applied'; btn.style.background = '#00875A';
-    setTimeout(() => { btn.textContent = 'Apply'; btn.style.background = ''; }, 1500);
+    setTimeout(() => { btn.textContent = origText; btn.style.background = ''; }, 1500);
   });
 }
 
 function clearFilters() {
   state.filters = {};
-  document.getElementById('jqlIn').value = '';
+  const _jqlIn = document.getElementById('jqlIn');
+  if (_jqlIn) _jqlIn.value = '';
   document.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.qf-btn')?.classList.add('active');
   refreshAllLabels(); refreshChips();
   pushFilters();
 }
 
+// ── TOAST ─────────────────────────────────────────────────────────────────
+function showToast(msg, type /* 'error' | 'info' */ = 'error') {
+  // Remove any existing toast first
+  document.getElementById('cfgToast')?.remove();
+  const t = document.createElement('div');
+  t.id = 'cfgToast';
+  const bg  = type === 'error' ? '#DE350B' : '#0052CC';
+  const ico = type === 'error' ? '✕' : 'ℹ';
+  t.style.cssText = [
+    'position:fixed', 'top:16px', 'left:50%', 'transform:translateX(-50%)',
+    `background:${bg}`, 'color:#fff', 'padding:10px 18px 10px 14px',
+    'border-radius:4px', 'font-size:13px', 'font-family:inherit',
+    'font-weight:600', 'box-shadow:0 4px 16px rgba(0,0,0,.25)',
+    'z-index:999999', 'display:flex', 'align-items:center', 'gap:8px',
+    'white-space:nowrap', 'cursor:pointer', 'max-width:90vw',
+  ].join(';');
+  t.innerHTML = `<span>${ico}</span><span style="font-weight:400">${esc(msg)}</span>`;
+  document.body.appendChild(t);
+  const dismiss = () => { clearTimeout(tid); t.remove(); };
+  const tid = setTimeout(dismiss, 6000);
+  t.onclick = dismiss;
+}
+
 // ── MODAL ──────────────────────────────────────────────────────────────────
-function showModal({ title, fields, onSave }) {
+function showModal({ title, fields, onSave, _isError, _errorMsg }) {
+  if (_isError) {
+    const errOverlay = document.createElement('div');
+    errOverlay.className = 'modal-overlay';
+    errOverlay.innerHTML = `
+      <div class="modal">
+        <h3 style="color:#DE350B">${esc(title)}</h3>
+        <p style="font-size:13px;color:#42526E;margin-bottom:14px">${esc(_errorMsg || '')}</p>
+        <div class="modal-footer">
+          <button class="btn-save" id="modalClose">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(errOverlay);
+    errOverlay.querySelector('#modalClose').onclick = () => errOverlay.remove();
+    errOverlay.onclick = e => { if (e.target === errOverlay) errOverlay.remove(); };
+    return;
+  }
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
@@ -632,8 +707,26 @@ function updateDropdownVisibility(cfg) {
 
 // ── CONFIG FORM (gadget edit / configuration mode) ─────────────────────────
 async function mountConfigForm(ctx) {
-  const savedConfig = ctx?.extension?.gadgetConfiguration || {};
-  const richFilters = await invoke('listRichFilters').catch(() => []);
+  // Inject CONFIG_CSS so styles work whether or not style.css loaded
+  if (!document.getElementById('cfg-styles')) {
+    const s = document.createElement('style');
+    s.id = 'cfg-styles';
+    s.textContent = CONFIG_CSS;
+    document.head.appendChild(s);
+  }
+
+  const savedConfig = ctx?.extension?.gadgetConfiguration || ctx?.gadgetConfiguration || {};
+
+  // Load rich filters — capture error so we can surface it in the UI
+  let richFilters = [];
+  let loadError = '';
+  try {
+    richFilters = await invoke('listRichFilters');
+    if (!Array.isArray(richFilters)) { richFilters = []; }
+  } catch (e) {
+    console.error('listRichFilters failed:', e);
+    loadError = e?.message || 'Could not load rich filters. Check console for details.';
+  }
 
   // ── mutable form state ────────────────────────────────────────────────────
   let selectedRfId       = savedConfig.richFilterId      || '';
@@ -810,6 +903,18 @@ async function mountConfigForm(ctx) {
       ? `<span class="cfg-rf-star">⭐</span>`
       : '';
 
+    // Empty/error state shown below the dropdown
+    const rfLoadHint = loadError
+      ? `<div class="cfg-warn" style="margin-top:8px"><span class="cfg-warn-icon">⚠️</span><span>${esc(loadError)} — <a href="#" id="cfgRetryLoad" style="color:#BF2600">Retry</a></span></div>`
+      : richFilters.length === 0
+        ? `<div style="margin-top:10px;padding:10px 12px;background:#FFFAE6;border:1px solid #FFD966;border-radius:4px;font-size:13px;color:#412005">
+            <strong>No rich filters found in this environment.</strong><br>
+            <span style="font-size:12px">You must create a rich filter before configuring this gadget.</span><br>
+            <a href="#" id="cfgOpenList2" style="font-size:12px;color:#0052CC;font-weight:600;margin-top:4px;display:inline-block">→ Create a rich filter now</a>
+           </div>`
+        : '';
+
+
     document.getElementById('app').innerHTML = `
       <div class="cfg-wrap">
 
@@ -824,8 +929,9 @@ async function mountConfigForm(ctx) {
           </div>
           <div class="cfg-hint">
             <span class="cfg-hint-text">The rich filter to be used as the basis for the gadget</span>
-            <a href="#" id="cfgOpenList" class="cfg-link">Open rich filter config</a>
+            <a href="#" id="cfgOpenList" class="cfg-link">Open rich filters list</a>
           </div>
+          ${rfLoadHint}
           ${formError ? `<div class="cfg-error">${esc(formError)}</div>` : ''}
         </div>
 
@@ -863,7 +969,7 @@ async function mountConfigForm(ctx) {
 
         <div class="cfg-footer">
           <div class="cfg-footer-left">
-            <button class="cfg-submit" id="cfgSubmit">Submit</button>
+            <button class="cfg-submit" id="cfgSubmit" ${richFilters.length === 0 ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>Submit</button>
             <button class="cfg-cancel" id="cfgCancel">Cancel</button>
           </div>
           <div class="cfg-grid-icon">
@@ -906,19 +1012,76 @@ async function mountConfigForm(ctx) {
 
     document.getElementById('cfgSubmit').onclick = async () => {
       formError = '';
-      if (!selectedRfId) { formError = 'Please select a rich filter.'; renderForm(); return; }
-      if (quickMode === 'customize' && customizedFilters.length === 0) {
-        renderCustomizePanel(); // re-render to show warning
+      if (!selectedRfId) {
+        // Show dismissable toast at top so it's visible regardless of scroll
+        showToast(
+          richFilters.length === 0
+            ? 'No rich filters exist yet — create one first via "Open rich filter config"'
+            : 'Please select a rich filter from the dropdown',
+        );
+        // Also highlight the select field
+        document.getElementById('cfgRfSel')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        document.getElementById('cfgRfSel')?.focus();
         return;
       }
+      const realFilters = customizedFilters.filter(k => k !== '__smart_placeholder__');
+      if (quickMode === 'customize' && realFilters.length === 0) {
+        showToast('Please select at least one quick filter to display');
+        document.getElementById('cfgCustomizePanel')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        renderCustomizePanel(); // re-render to show the warning banner inside
+        return;
+      }
+
+      // Show a fixed-position overlay so feedback is always visible regardless of scroll
+      const overlay = document.createElement('div');
+      overlay.id = 'cfgSavingOverlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:inherit';
+      overlay.innerHTML = `
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style="animation:spin .8s linear infinite">
+          <circle cx="14" cy="14" r="11" stroke="#DFE1E6" stroke-width="3"/>
+          <path d="M14 3 a11 11 0 0 1 11 11" stroke="#0052CC" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span style="font-size:14px;color:#172b4d;font-weight:600">Saving…</span>`;
+      if (!document.getElementById('cfgSpinStyles')) {
+        const st = document.createElement('style');
+        st.id = 'cfgSpinStyles';
+        st.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+        document.head.appendChild(st);
+      }
+      document.body.appendChild(overlay);
+
+      const removeOverlay = () => { try { document.body.removeChild(overlay); } catch (_) {} };
+
       try {
-        await view.submit({
-          richFilterId: selectedRfId,
-          quickFiltersMode: quickMode,
-          enableJql,
-          customizedFilters: quickMode === 'customize' ? customizedFilters : [],
+        // Race view.submit() against a 10-second timeout
+        await Promise.race([
+          view.submit({
+            richFilterId: selectedRfId,
+            quickFiltersMode: quickMode,
+            enableJql,
+            customizedFilters: quickMode === 'customize' ? customizedFilters : [],
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Save timed out — please try again.')), 10000)
+          ),
+        ]);
+        // If we reach here, submit resolved without navigating away (unusual)
+        removeOverlay();
+      } catch (e) {
+        removeOverlay();
+        const msg = e?.message || 'Failed to save. Please try again.';
+        console.error('view.submit failed:', e);
+        showToast(msg);
+        // Also show a modal for detailed error messaging
+        showModal({
+          title: 'Save failed',
+          fields: [],
+          _isError: true,
+          _errorMsg: msg,
+          onSave() {},
         });
-      } catch (e) { console.error('view.submit failed:', e); }
+        formError = msg;
+      }
     };
 
     document.getElementById('cfgCancel').onclick = () => { try { view.close(); } catch (_) {} };
@@ -931,6 +1094,32 @@ async function mountConfigForm(ctx) {
         if (info?.baseUrl) window.open(`${info.baseUrl}/jira/apps/${appId}/rich-filters-app`, '_blank', 'noopener');
       } catch (_) {}
     };
+
+    // "Create one first" link (empty state)
+    document.getElementById('cfgOpenList2')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const info  = await invoke('getSiteInfo');
+        const appId = '0b40a7d9-0481-40b2-9055-a954178f4efe';
+        if (info?.baseUrl) window.open(`${info.baseUrl}/jira/apps/${appId}/rich-filters-app`, '_blank', 'noopener');
+      } catch (_) {}
+    });
+
+    // "Retry" link (load error state)
+    document.getElementById('cfgRetryLoad')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const reloaded = await invoke('listRichFilters');
+        if (Array.isArray(reloaded)) {
+          richFilters.length = 0;
+          reloaded.forEach(f => richFilters.push(f));
+          loadError = '';
+        }
+      } catch (err) {
+        console.error('Retry listRichFilters failed:', err);
+      }
+      renderForm();
+    });
 
     // close dropdown when clicking outside
     document.addEventListener('click', (e) => {
@@ -945,31 +1134,50 @@ async function mountConfigForm(ctx) {
   renderForm();
 }
 
-// ── MOUNT ──────────────────────────────────────────────────────────────────
+// ── UNCONFIGURED PLACEHOLDER ───────────────────────────────────────────────
+function mountUnconfigured() {
+  if (!document.getElementById('cfg-styles')) {
+    const s = document.createElement('style');
+    s.id = 'cfg-styles';
+    s.textContent = CONFIG_CSS;
+    document.head.appendChild(s);
+  }
+  document.getElementById('app').innerHTML = `
+    <div style="padding:24px 20px;text-align:center;font-family:inherit">
+      <div style="width:44px;height:44px;background:#DEEBFF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="11" cy="11" r="9" stroke="#0052CC" stroke-width="1.8"/>
+          <path d="M11 7v1M11 10v5" stroke="#0052CC" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:#172b4d;margin-bottom:6px">Rich Filter Controller not configured</div>
+      <div style="font-size:13px;color:#42526E;margin-bottom:14px">Click the <strong>✏️ Edit</strong> icon (top-right of this gadget) to configure it.</div>
+    </div>`;
+}
+
+// ── MOUNT (compact view — matches marketplace Image 3) ───────────────────
 function mount() {
-  // Inject CSS — only way styles work in Forge's sandboxed iframe
   if (!document.getElementById('ctrl-styles')) {
     const s = document.createElement('style');
     s.id = 'ctrl-styles';
-    s.textContent = CSS;
+    s.textContent = CSS + VIEW2_CSS;
     document.head.appendChild(s);
   }
 
+  const jqlOnly     = gadgetConfig.quickFiltersMode === 'jql';
+  const jqlDisabled = gadgetConfig.enableJql === false;
+
   document.getElementById('app').innerHTML = `
-    <div class="ctrl">
+    <div class="ctrl-v2">
 
-      <!-- Row 0: Rich Filter selector -->
-      <div class="rf-pick-row">
-        <span class="rf-pick-lbl">Rich Filter:</span>
-        <select id="rfPickSel" class="rf-pick-sel">
-          <option value="">Select a rich filter…</option>
-        </select>
-        <span id="rfPickBadge" style="display:none" class="rf-pick-badge"></span>
-        <span id="rfPickHint" class="rf-pick-hint">No filter selected — all issues shown</span>
-      </div>
+      <!-- Hidden: used by loadRichFilters internally -->
+      <select id="rfPickSel" style="display:none"></select>
+      <span   id="rfPickHint" style="display:none"></span>
 
-      <!-- Row 1: Filter dropdowns -->
-      <div class="filter-row">
+      <!-- Combined row: QF pill buttons (static/smart) + dropdown filter pills -->
+      <div class="v2-filter-row" id="v2FilterRow"${jqlOnly ? ' style="display:none"' : ''}>
+        <!-- #qfRow has display:contents so its children sit inline with the dd-wraps -->
+        <div class="v2-qf-inline" id="qfRow"></div>
         <div class="dd-wrap" id="ddProject"></div>
         <div class="dd-wrap" id="ddStatus"></div>
         <div class="dd-wrap" id="ddAssignee"></div>
@@ -979,48 +1187,88 @@ function mount() {
         <div class="dd-wrap" id="ddSprint"></div>
       </div>
 
-      <!-- Row 2: JQL + action buttons -->
-      <div class="jql-row">
-        <input id="jqlIn" class="jql-in" placeholder="JQL or text search… (Enter to apply)" autocomplete="off"/>
-        <button class="btn btn-clear" id="btnClear">✕ Clear</button>
-        <button class="btn btn-apply" id="btnApply">Apply</button>
-      </div>
-
-      <!-- Row 3: Active filter chips -->
+      <!-- Active filter chips (auto-hidden when empty) -->
       <div class="chips" id="chips"></div>
 
-      <!-- Row 4: Quick Filters -->
-      <div class="section" id="qfSection">
-        <div class="section-hdr">
-          <span class="section-title">⚡ Quick Filters</span>
-          <button class="btn-icon" onclick="APP.addSmartFilter()" title="Add custom quick filter">＋ Add</button>
-        </div>
-        <div class="qf-row" id="qfRow"></div>
+      <!-- JQL input row: always in DOM, shown via JQL button or in jql-only mode -->
+      <div class="jql-row" id="jqlRow" style="${jqlOnly ? '' : 'display:none'}">
+        <input id="jqlIn" class="jql-in" placeholder="Enter JQL… (Enter to apply)" autocomplete="off"/>
       </div>
 
-      <!-- Row 5: Saved Presets -->
-      <div class="section">
-        <div class="section-hdr">
-          <span class="section-title">📋 Presets</span>
+      <!-- Bottom action bar -->
+      <div class="v2-bar">
+        <div class="v2-bar-left">
+          <svg class="v2-grid-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="0" y="0" width="6" height="6" rx="1" fill="#97A0AF"/>
+            <rect x="8" y="0" width="6" height="6" rx="1" fill="#97A0AF"/>
+            <rect x="0" y="8" width="6" height="6" rx="1" fill="#97A0AF"/>
+            <rect x="8" y="8" width="6" height="6" rx="1" fill="#97A0AF"/>
+          </svg>
+          <button class="v2-pg-btn" id="v2PgBtn"><span id="v2PgVal">15</span> ▾</button>
+          <button class="v2-icon-btn" id="v2ExportBtn" title="Export">
+            <svg width="12" height="11" viewBox="0 0 12 11" fill="none"><path d="M1 7.5V9.5C1 10.05 1.45 10.5 2 10.5H10C10.55 10.5 11 10.05 11 9.5V7.5" stroke="#5E6C84" stroke-width="1.3" stroke-linecap="round"/><path d="M6 1V7.5M3.5 5L6 7.5 8.5 5" stroke="#5E6C84" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="v2-icon-btn" id="v2ShareBtn" title="Copy link">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="9" cy="2" r="1.5" stroke="#5E6C84" stroke-width="1.2"/><circle cx="2" cy="6" r="1.5" stroke="#5E6C84" stroke-width="1.2"/><circle cx="9" cy="10" r="1.5" stroke="#5E6C84" stroke-width="1.2"/><path d="M3.5 5.5L7.5 3M3.5 6.5L7.5 9" stroke="#5E6C84" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </button>
+          <button class="v2-icon-btn v2-more-btn" id="v2MoreBtn" title="More">⋯</button>
+          <span id="rfPickBadge" class="rf-pick-badge" style="display:none"></span>
         </div>
-        <div class="preset-row" id="presetRow"><span style="font-size:11px;color:#6B778C">No presets saved yet</span></div>
+        <div class="v2-bar-right">
+          ${!jqlDisabled && !jqlOnly ? `<button class="v2-jql-lbl" id="v2JqlBtn">JQL</button>` : ''}
+          <button class="v2-icon-action" id="v2CancelBtn" title="Cancel / clear all">←</button>
+          <button class="v2-apply-btn" id="v2Apply" title="Apply filters">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M6.5 1.5a5 5 0 1 0 4.33 2.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+              <polyline points="10.5,1.5 10.5,4 8,4" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="v2-clear-btn" id="v2ClearBtn" title="Clear all filters">✕</button>
+        </div>
       </div>
 
     </div>`;
 
-  // Apply gadget configuration visibility settings
-  if (gadgetConfig.enableJql === false) {
-    const jqlIn = document.getElementById('jqlIn');
-    if (jqlIn) jqlIn.style.display = 'none';
-  }
-  if (gadgetConfig.quickFiltersMode === 'jql') {
-    const qfSec = document.getElementById('qfSection');
-    if (qfSec) qfSec.style.display = 'none';
+  // Apply = push current filter state to linked gadgets
+  document.getElementById('v2Apply').onclick    = applyFilters;
+  // Cancel (←) = clear all selections
+  document.getElementById('v2CancelBtn').onclick = clearFilters;
+  // Clear (✕) = clear all selections
+  document.getElementById('v2ClearBtn').onclick  = clearFilters;
+
+  // JQL toggle: show/hide JQL input, hide/show filter row
+  if (!jqlDisabled && !jqlOnly) {
+    document.getElementById('v2JqlBtn').onclick = () => {
+      const jqlRow    = document.getElementById('jqlRow');
+      const filterRow = document.getElementById('v2FilterRow');
+      const btn       = document.getElementById('v2JqlBtn');
+      const jqlOpen   = jqlRow.style.display !== 'none';
+      jqlRow.style.display    = jqlOpen ? 'none' : '';
+      filterRow.style.display = jqlOpen ? '' : 'none';
+      btn.classList.toggle('active', !jqlOpen);
+      if (!jqlOpen) document.getElementById('jqlIn')?.focus();
+    };
   }
 
-  document.getElementById('btnApply').onclick = applyFilters;
-  document.getElementById('btnClear').onclick  = clearFilters;
-  document.getElementById('jqlIn').onkeydown   = e => { if (e.key === 'Enter') applyFilters(); };
+  // JQL Enter to apply
+  document.getElementById('jqlIn').onkeydown = e => { if (e.key === 'Enter') applyFilters(); };
+
+  // Page-size cycle button: 15 → 25 → 50 → 100 → 15 …
+  const PG_SIZES = [15, 25, 50, 100];
+  let pgSize = 15;
+  document.getElementById('v2PgBtn').onclick = e => {
+    e.stopPropagation();
+    pgSize = PG_SIZES[(PG_SIZES.indexOf(pgSize) + 1) % PG_SIZES.length];
+    document.getElementById('v2PgVal').textContent = pgSize;
+    invoke('updateFilterState', { richFilterId: FILTER_ID, filters: { ...state.filters, maxResults: pgSize } }).catch(() => {});
+  };
+
+  // Copy link
+  document.getElementById('v2ShareBtn').onclick = () => {
+    try { navigator.clipboard?.writeText(window.location.href); } catch (_) {}
+  };
+
+  // Close dropdowns on outside click
   document.addEventListener('click', e => {
     if (!e.target.closest('.dd-wrap') && !e.target.closest('.modal')) closeAll();
   });
@@ -1028,20 +1276,25 @@ function mount() {
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 async function init() {
-  // Detect gadget mode: entryPoint can sit at ctx.extension.entryPoint OR ctx.entryPoint
   const ctx = await view.getContext().catch(() => null);
   const entryPoint  = ctx?.extension?.entryPoint || ctx?.entryPoint || 'view';
   const savedConfig = ctx?.extension?.gadgetConfiguration || ctx?.gadgetConfiguration || {};
 
-  // Show config form when:
-  //   (1) user clicked the gadget "Configure / Edit" icon  →  entryPoint === 'edit'
-  //   (2) gadget was just added and has no rich filter saved yet
-  if (entryPoint === 'edit' || !savedConfig.richFilterId) {
+  // Only show the full config form (with view.submit) in true edit mode.
+  // view.submit() is a Forge platform call that ONLY works when entryPoint === 'edit'.
+  if (entryPoint === 'edit') {
     await mountConfigForm(ctx);
     return;
   }
 
   // ── VIEW MODE ─────────────────────────────────────────────────────────────
+  // If no config saved yet, show a "please configure" placeholder instead of
+  // the config form — avoid calling view.submit() in view mode.
+  if (!savedConfig.richFilterId) {
+    mountUnconfigured();
+    return;
+  }
+
   gadgetConfig = savedConfig;
 
   mount();

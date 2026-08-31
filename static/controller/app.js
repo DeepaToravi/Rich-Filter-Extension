@@ -21,7 +21,7 @@ class MultiSelect {
         <div class="dropdown-menu"></div>
       </div>
     `;
-
+ //adding an comments
     this.btn = this.container.querySelector(".dropdown-btn");
     this.menu = this.container.querySelector(".dropdown-menu");
 
