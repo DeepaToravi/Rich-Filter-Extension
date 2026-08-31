@@ -21,19 +21,21 @@ class MultiSelect {
         <div class="dropdown-menu"></div>
       </div>
     `;
- //adding an comments
     this.btn = this.container.querySelector(".dropdown-btn");
     this.menu = this.container.querySelector(".dropdown-menu");
 
+    // Toggle dropdown visibility on button click
     this.btn.onclick = () => {
       this.menu.style.display =
         this.menu.style.display === "block" ? "none" : "block";
     };
 
+    // Render each option as a clickable div
     this.menu.innerHTML = this.options.map(opt =>
       `<div data-value="${opt}">${opt}</div>`
     ).join("");
 
+    // Toggle selection state when an option is clicked
     this.menu.onclick = (e) => {
       const val = e.target.dataset.value;
       if (!val) return;
@@ -101,6 +103,7 @@ class FilterController {
     this.loadSmartFilters();
   }
 
+  // Merge new filter values and push the updated state to the backend
   update(newData) {
     this.filters = { ...this.filters, ...newData };
     window.ForgeBridge.invoke("updateFilterState", {
@@ -109,6 +112,7 @@ class FilterController {
     });
   }
 
+  // Fetch saved smart filters and render them as clickable JQL tags
   async loadSmartFilters() {
     const filters = await window.ForgeBridge.invoke("getSmartFilters", {
       richFilterId: FILTER_ID
